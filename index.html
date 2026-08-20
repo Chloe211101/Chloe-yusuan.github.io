@@ -2101,7 +2101,7 @@
         // ================================================================
         function renderBatchCategoryManager() {
     const container = document.getElementById('batchCategoryListContainer');
-    const cats = batchCategories.length ? batchCategories : DEFAULT_BATCH_CATEGORIES;
+    const cats = batchCategories.length ? batchCategories ;
     if (cats.length === 0) {
         container.innerHTML = `<p class="text-muted text-small">暂无类别，请添加。</p>`;
         return;
