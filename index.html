@@ -2177,7 +2177,7 @@
 
         function renderMonthlyCategoryManager() {
             const container = document.getElementById('monthlyCategoryListContainer');
-            const cats = monthlyCategories.length ? monthlyCategories : DEFAULT_MONTHLY_CATEGORIES;
+            const cats = monthlyCategories.length ? monthlyCategories :;
             if (cats.length === 0) {
                 container.innerHTML = `<p class="text-muted text-small">暂无类别，请添加。</p>`;
                 return;
