@@ -4,13 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>🏭 生产预算管理系统 · 实时协作版</title>
-    <!-- Firebase SDK (compat) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
     </script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js">
     </script>
     <style>
-        /* ====== CSS 样式（完整版） ====== */
+        /* ====== 完整样式 ====== */
         :root {
             --primary: #1E3A8A;
             --primary-light: #3B82F6;
@@ -616,7 +615,6 @@
 </head>
 <body>
 
-    <!-- ====== 顶部导航 ====== -->
     <header class="app-header">
         <div class="container">
             <div class="header-inner">
@@ -632,16 +630,13 @@
         </div>
     </header>
 
-    <!-- ====== 主容器 ====== -->
     <main class="container">
-        <!-- 共享提示 -->
-        <div class="share-banner" id="shareBanner">
+        <div class="share-banner">
             <span>🔗 分享此链接即可与团队实时同步数据</span>
             <div class="url-display" id="shareUrlDisplay">加载中...</div>
             <button class="copy-btn" id="copyShareUrl">📋 复制链接</button>
         </div>
 
-        <!-- 批次管理 -->
         <section class="page active" id="pageBatches">
             <div class="flex-between section-title">
                 <span>📦 批次预算管理</span>
@@ -665,7 +660,6 @@
             <div id="batchListContainer"></div>
         </section>
 
-        <!-- 月度支出预算 -->
         <section class="page" id="pageExpenses">
             <div class="flex-between section-title">
                 <span>📅 月度支出预算</span>
@@ -678,28 +672,21 @@
             <div id="monthlyBudgetList"></div>
         </section>
 
-        <!-- 预警看板 -->
         <section class="page" id="pageAlerts">
             <div class="section-title"><span>🚨 预警看板</span></div>
             <div id="alertBoard"></div>
         </section>
     </main>
 
-    <!-- ====== 底部导航 ====== -->
     <nav class="bottom-nav" id="bottomNav">
         <button class="nav-item active" data-page="pageBatches"><span class="nav-icon">📦</span><span class="nav-label">批次</span></button>
         <button class="nav-item" data-page="pageExpenses"><span class="nav-icon">📅</span><span class="nav-label">支出</span></button>
         <button class="nav-item" data-page="pageAlerts"><span class="nav-icon">🚨</span><span class="nav-label">预警</span></button>
     </nav>
 
-    <!-- ====== Toast ====== -->
     <div class="toast" id="toast"></div>
 
-    <!-- ============================================================ -->
-    <!-- 模态框（所有弹窗） -->
-    <!-- ============================================================ -->
-
-    <!-- 新建批次 -->
+    <!-- ====== 所有模态框 ====== -->
     <div class="modal-overlay" id="modalBatch">
         <div class="modal-content">
             <button class="modal-close" id="closeBatchModal">✕</button>
@@ -718,7 +705,6 @@
         </div>
     </div>
 
-    <!-- 编辑批次预算 -->
     <div class="modal-overlay" id="modalEditBatch">
         <div class="modal-content">
             <button class="modal-close" id="closeEditBatchModal">✕</button>
@@ -738,7 +724,6 @@
         </div>
     </div>
 
-    <!-- 录入批次实际支出 -->
     <div class="modal-overlay" id="modalBatchActual">
         <div class="modal-content">
             <button class="modal-close" id="closeBatchActualModal">✕</button>
@@ -763,7 +748,6 @@
         </div>
     </div>
 
-    <!-- 新建月度预算 -->
     <div class="modal-overlay" id="modalMonthlyBudget">
         <div class="modal-content">
             <button class="modal-close" id="closeMonthlyModal">✕</button>
@@ -782,7 +766,6 @@
         </div>
     </div>
 
-    <!-- 编辑月度预算 -->
     <div class="modal-overlay" id="modalEditMonthly">
         <div class="modal-content">
             <button class="modal-close" id="closeEditMonthlyModal">✕</button>
@@ -802,7 +785,6 @@
         </div>
     </div>
 
-    <!-- 录入月度实际支出 -->
     <div class="modal-overlay" id="modalMonthlyActual">
         <div class="modal-content">
             <button class="modal-close" id="closeMonthlyActualModal">✕</button>
@@ -827,14 +809,13 @@
         </div>
     </div>
 
-    <!-- 管理批次类别 -->
     <div class="modal-overlay" id="modalBatchCategoryManager">
         <div class="modal-content">
             <button class="modal-close" id="closeBatchCategoryModal">✕</button>
             <h2>⚙️ 管理批次类别</h2>
             <p class="text-muted text-small" style="margin-bottom:12px;">添加或删除批次预算类别。删除不会影响已有批次的数据。</p>
             <div style="display:flex; gap:8px; margin-bottom:16px;">
-                <input type="text" id="newBatchCategoryInput" placeholder="输入新类别名称（如：螺丝）" style="flex:1; padding:8px 12px; border:2px solid var(--border); border-radius:6px; font-size:14px;" />
+                <input type="text" id="newBatchCategoryInput" placeholder="输入新类别名称" style="flex:1; padding:8px 12px; border:2px solid var(--border); border-radius:6px; font-size:14px;" />
                 <button class="btn btn-primary" id="btnAddBatchCategory">+ 添加</button>
             </div>
             <div id="batchCategoryListContainer"></div>
@@ -844,14 +825,13 @@
         </div>
     </div>
 
-    <!-- 管理月度类别 -->
     <div class="modal-overlay" id="modalMonthlyCategoryManager">
         <div class="modal-content">
             <button class="modal-close" id="closeMonthlyCategoryModal">✕</button>
             <h2>⚙️ 管理月度类别</h2>
             <p class="text-muted text-small" style="margin-bottom:12px;">添加或删除月度支出类别。删除不会影响已有月份的数据。</p>
             <div style="display:flex; gap:8px; margin-bottom:16px;">
-                <input type="text" id="newMonthlyCategoryInput" placeholder="输入新类别名称（如：团建费）" style="flex:1; padding:8px 12px; border:2px solid var(--border); border-radius:6px; font-size:14px;" />
+                <input type="text" id="newMonthlyCategoryInput" placeholder="输入新类别名称" style="flex:1; padding:8px 12px; border:2px solid var(--border); border-radius:6px; font-size:14px;" />
                 <button class="btn btn-primary" id="btnAddMonthlyCategory">+ 添加</button>
             </div>
             <div id="monthlyCategoryListContainer"></div>
@@ -861,12 +841,9 @@
         </div>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- JavaScript 业务逻辑 -->
-    <!-- ============================================================ -->
     <script>
         // ================================================================
-        //  🔥 您的 Firebase 配置（已填入）
+        //  🔥 您的 Firebase 配置（已正确填写）
         // ================================================================
         const FIREBASE_CONFIG = {
             apiKey: "AIzaSyAWTKeDGV1BT0LaWHyYJKMBV7PZGImh0vU",
@@ -881,8 +858,8 @@
         // ================================================================
         //  初始化 Firebase
         // ================================================================
-        let firebaseInitialized = false;
         let db = null;
+        let firebaseInitialized = false;
         let currentProjectId = 'default';
 
         function initFirebase() {
@@ -904,7 +881,7 @@
         }
 
         // ================================================================
-        //  数据层 — Firebase Realtime Database 操作
+        //  数据层
         // ================================================================
         function getRootRef() {
             const params = new URLSearchParams(window.location.search);
@@ -914,12 +891,8 @@
 
         function fetchAllData() {
             return new Promise((resolve, reject) => {
-                if (!firebaseInitialized || !db) {
-                    reject(new Error('Firebase 未初始化'));
-                    return;
-                }
-                const root = getRootRef();
-                root.once('value', (snap) => {
+                if (!firebaseInitialized || !db) reject(new Error('Firebase not ready'));
+                getRootRef().once('value', snap => {
                     const val = snap.val() || {};
                     resolve({
                         batches: val.batches || [],
@@ -927,33 +900,20 @@
                         batchCategories: val.batchCategories || [],
                         monthlyCategories: val.monthlyCategories || []
                     });
-                }, (err) => {
-                    reject(err);
-                });
+                }, reject);
             });
         }
 
         function saveAllData(data) {
             return new Promise((resolve, reject) => {
-                if (!firebaseInitialized || !db) {
-                    reject(new Error('Firebase 未初始化'));
-                    return;
-                }
-                const root = getRootRef();
-                root.set(data, (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
+                if (!firebaseInitialized || !db) reject(new Error('Firebase not ready'));
+                getRootRef().set(data, err => err ? reject(err) : resolve());
             });
         }
 
         function listenDataChange(callback) {
-            if (!firebaseInitialized || !db) {
-                console.warn('Firebase 未初始化，无法监听');
-                return () => {};
-            }
-            const root = getRootRef();
-            const listener = root.on('value', (snap) => {
+            const ref = getRootRef();
+            const listener = ref.on('value', snap => {
                 const val = snap.val() || {};
                 callback({
                     batches: val.batches || [],
@@ -961,30 +921,11 @@
                     batchCategories: val.batchCategories || [],
                     monthlyCategories: val.monthlyCategories || []
                 });
-            }, (err) => {
-                console.error('监听数据变化出错:', err);
+            }, err => {
+                console.error('监听出错:', err);
                 updateSyncStatus(false);
             });
-            return () => {
-                root.off('value', listener);
-            };
-        }
-
-        // ================================================================
-        //  本地缓存
-        // ================================================================
-        function loadLocalCache() {
-            try {
-                const raw = localStorage.getItem('prod_cache_' + currentProjectId);
-                if (raw) return JSON.parse(raw);
-                return null;
-            } catch (e) { return null; }
-        }
-
-        function saveLocalCache(data) {
-            try {
-                localStorage.setItem('prod_cache_' + currentProjectId, JSON.stringify(data));
-            } catch (e) { /* ignore */ }
+            return () => ref.off('value', listener);
         }
 
         // ================================================================
@@ -994,9 +935,7 @@
         let monthlyBudgets = [];
         let batchCategories = [];
         let monthlyCategories = [];
-        let isOnline = false;
         let unlistenFn = null;
-        let isLocalUpdate = false;
         let pushPending = false;
 
         const DEFAULT_BATCH_CATEGORIES = ['不锈钢板', '不锈钢管', '玻璃', '酸洗', '镀色', '激光', '外购成品', '包装', '配件'];
@@ -1066,7 +1005,7 @@
         }
 
         // ================================================================
-        //  CSV 导出功能
+        //  CSV 导出（简略）
         // ================================================================
         function downloadCSV(csvString, filename) {
             const BOM = '\uFEFF';
@@ -1318,8 +1257,9 @@
                     e.stopPropagation();
                     if (confirm('确定删除该批次及其所有数据吗？')) {
                         batches = batches.filter(b => b.id !== btn.dataset.id);
-                        pushDataToFirebase();
-                        showToast('批次已删除', 'success');
+                        pushDataToFirebase()
+                            .then(() => showToast('批次已删除', 'success'))
+                            .catch(() => showToast('删除失败', 'error'));
                     }
                 });
             });
@@ -1462,8 +1402,9 @@
                     const month = this.dataset.month;
                     if (confirm(`确定删除 ${month} 的月度预算吗？`)) {
                         monthlyBudgets = monthlyBudgets.filter(m => m.month !== month);
-                        pushDataToFirebase();
-                        showToast('月度预算已删除', 'success');
+                        pushDataToFirebase()
+                            .then(() => showToast('月度预算已删除', 'success'))
+                            .catch(() => showToast('删除失败', 'error'));
                     }
                 });
             });
@@ -1606,31 +1547,49 @@
         }
 
         // ================================================================
-        //  数据同步
+        //  数据同步（返回 Promise）
         // ================================================================
         function pushDataToFirebase() {
-            if (pushPending) return;
-            pushPending = true;
-            const data = {
-                batches: batches,
-                monthlyBudgets: monthlyBudgets,
-                batchCategories: batchCategories,
-                monthlyCategories: monthlyCategories
-            };
-            saveAllData(data).then(() => {
-                pushPending = false;
-                saveLocalCache(data);
-                updateSyncStatus(true);
-            }).catch((err) => {
-                pushPending = false;
-                console.error('保存到 Firebase 失败:', err);
-                updateSyncStatus(false);
-                showToast('⚠️ 数据同步失败，请检查网络', 'error');
+            return new Promise((resolve, reject) => {
+                if (pushPending) {
+                    reject(new Error('正在同步中...'));
+                    return;
+                }
+                pushPending = true;
+                const data = {
+                    batches: batches,
+                    monthlyBudgets: monthlyBudgets,
+                    batchCategories: batchCategories,
+                    monthlyCategories: monthlyCategories
+                };
+                saveAllData(data).then(() => {
+                    pushPending = false;
+                    saveLocalCache(data);
+                    updateSyncStatus(true);
+                    resolve();
+                }).catch(err => {
+                    pushPending = false;
+                    console.error('保存到 Firebase 失败:', err);
+                    updateSyncStatus(false);
+                    reject(err);
+                });
             });
         }
 
+        function saveLocalCache(data) {
+            try {
+                localStorage.setItem('prod_cache_' + currentProjectId, JSON.stringify(data));
+            } catch (e) { /* ignore */ }
+        }
+
+        function loadLocalCache() {
+            try {
+                const raw = localStorage.getItem('prod_cache_' + currentProjectId);
+                return raw ? JSON.parse(raw) : null;
+            } catch (e) { return null; }
+        }
+
         function updateSyncStatus(online) {
-            isOnline = online;
             const dot = document.getElementById('syncDot');
             const label = document.getElementById('syncLabel');
             if (online) {
@@ -1643,7 +1602,7 @@
         }
 
         function onRemoteDataUpdate(data) {
-            if (isLocalUpdate) return;
+            if (pushPending) return; // 避免循环
             batches = data.batches || [];
             monthlyBudgets = data.monthlyBudgets || [];
             batchCategories = data.batchCategories || [];
@@ -1658,80 +1617,12 @@
                 unlistenFn();
                 unlistenFn = null;
             }
-            if (!firebaseInitialized || !db) {
-                console.warn('Firebase 未初始化，无法监听');
-                return;
-            }
+            if (!firebaseInitialized || !db) return;
             unlistenFn = listenDataChange(onRemoteDataUpdate);
         }
 
         // ================================================================
         //  初始化数据
-        // ================================================================
-        function loadInitialData() {
-            const cache = loadLocalCache();
-            if (cache) {
-                batches = cache.batches || [];
-                monthlyBudgets = cache.monthlyBudgets || [];
-                batchCategories = cache.batchCategories || [];
-                monthlyCategories = cache.monthlyCategories || [];
-                renderAll();
-                updateSyncStatus(false);
-                console.log('📦 从本地缓存加载数据');
-            }
-
-            if (!firebaseInitialized || !db) {
-                showToast('⚠️ Firebase 未连接，请检查配置', 'error');
-                return;
-            }
-
-            fetchAllData().then((data) => {
-                if (data.batches.length || data.monthlyBudgets.length || data.batchCategories.length || data
-                    .monthlyCategories.length) {
-                    batches = data.batches;
-                    monthlyBudgets = data.monthlyBudgets;
-                    batchCategories = data.batchCategories.length ? data.batchCategories : DEFAULT_BATCH_CATEGORIES;
-                    monthlyCategories = data.monthlyCategories.length ? data.monthlyCategories :
-                        DEFAULT_MONTHLY_CATEGORIES;
-                    saveLocalCache(data);
-                    renderAll();
-                    updateSyncStatus(true);
-                    console.log('☁️ 从 Firebase 加载数据');
-                } else {
-                    if (!cache) {
-                        batchCategories = [...DEFAULT_BATCH_CATEGORIES];
-                        monthlyCategories = [...DEFAULT_MONTHLY_CATEGORIES];
-                        batches = getSampleBatches();
-                        monthlyBudgets = getSampleMonthly();
-                        renderAll();
-                        pushDataToFirebase();
-                        console.log('📝 初始化默认数据');
-                    }
-                }
-                startListening();
-            }).catch((err) => {
-                console.error('加载数据失败:', err);
-                if (cache) {
-                    batches = cache.batches || [];
-                    monthlyBudgets = cache.monthlyBudgets || [];
-                    batchCategories = cache.batchCategories || [];
-                    monthlyCategories = cache.monthlyCategories || [];
-                    renderAll();
-                    updateSyncStatus(false);
-                    showToast('⚠️ 使用本地缓存数据', 'warning');
-                } else {
-                    batchCategories = [...DEFAULT_BATCH_CATEGORIES];
-                    monthlyCategories = [...DEFAULT_MONTHLY_CATEGORIES];
-                    batches = getSampleBatches();
-                    monthlyBudgets = getSampleMonthly();
-                    renderAll();
-                    showToast('⚠️ 使用示例数据', 'warning');
-                }
-            });
-        }
-
-        // ================================================================
-        //  示例数据
         // ================================================================
         function getSampleBatches() {
             return [{
@@ -1798,11 +1689,90 @@
             return [{ month: '2025-08', budgetItems, actuals }];
         }
 
+        function loadInitialData() {
+            const cache = loadLocalCache();
+            if (cache) {
+                batches = cache.batches || [];
+                monthlyBudgets = cache.monthlyBudgets || [];
+                batchCategories = cache.batchCategories || [];
+                monthlyCategories = cache.monthlyCategories || [];
+                renderAll();
+                updateSyncStatus(false);
+                console.log('📦 从本地缓存加载数据');
+            }
+
+            if (!firebaseInitialized || !db) {
+                showToast('⚠️ Firebase 未连接，请检查配置', 'error');
+                return;
+            }
+
+            fetchAllData().then((data) => {
+                if (data.batches.length || data.monthlyBudgets.length || data.batchCategories.length || data
+                    .monthlyCategories.length) {
+                    batches = data.batches;
+                    monthlyBudgets = data.monthlyBudgets;
+                    batchCategories = data.batchCategories.length ? data.batchCategories : DEFAULT_BATCH_CATEGORIES;
+                    monthlyCategories = data.monthlyCategories.length ? data.monthlyCategories :
+                        DEFAULT_MONTHLY_CATEGORIES;
+                    saveLocalCache(data);
+                    renderAll();
+                    updateSyncStatus(true);
+                    console.log('☁️ 从 Firebase 加载数据');
+                } else {
+                    if (!cache) {
+                        batchCategories = [...DEFAULT_BATCH_CATEGORIES];
+                        monthlyCategories = [...DEFAULT_MONTHLY_CATEGORIES];
+                        batches = getSampleBatches();
+                        monthlyBudgets = getSampleMonthly();
+                        renderAll();
+                        pushDataToFirebase().catch(() => {});
+                        console.log('📝 初始化默认数据');
+                    }
+                }
+                startListening();
+            }).catch((err) => {
+                console.error('加载数据失败:', err);
+                if (cache) {
+                    batches = cache.batches || [];
+                    monthlyBudgets = cache.monthlyBudgets || [];
+                    batchCategories = cache.batchCategories || [];
+                    monthlyCategories = cache.monthlyCategories || [];
+                    renderAll();
+                    updateSyncStatus(false);
+                    showToast('⚠️ 使用本地缓存数据', 'warning');
+                } else {
+                    batchCategories = [...DEFAULT_BATCH_CATEGORIES];
+                    monthlyCategories = [...DEFAULT_MONTHLY_CATEGORIES];
+                    batches = getSampleBatches();
+                    monthlyBudgets = getSampleMonthly();
+                    renderAll();
+                    showToast('⚠️ 使用示例数据', 'warning');
+                }
+            });
+        }
+
         // ================================================================
-        //  模态框操作
+        //  模态框操作（全部保留）
         // ================================================================
-        // ---- 新建批次 ----
-        function openBatchModal() {
+        function closeBatchModal() { document.getElementById('modalBatch').classList.remove('show'); }
+
+        function closeEditBatchModal() { document.getElementById('modalEditBatch').classList.remove('show'); }
+
+        function closeBatchActualModal() { document.getElementById('modalBatchActual').classList.remove('show'); }
+
+        function closeMonthlyModal() { document.getElementById('modalMonthlyBudget').classList.remove('show'); }
+
+        function closeEditMonthlyModal() { document.getElementById('modalEditMonthly').classList.remove('show'); }
+
+        function closeMonthlyActualModal() { document.getElementById('modalMonthlyActual').classList.remove('show'); }
+
+        function closeBatchCategoryModal() { document.getElementById('modalBatchCategoryManager').classList.remove('show'); }
+
+        function closeMonthlyCategoryModal() { document.getElementById('modalMonthlyCategoryManager').classList.remove(
+            'show'); }
+
+        // 新建批次
+        document.getElementById('btnAddBatch').addEventListener('click', function() {
             const modal = document.getElementById('modalBatch');
             modal.classList.add('show');
             const container = document.getElementById('budgetItemsContainer');
@@ -1819,13 +1789,11 @@
             container.innerHTML = html;
             document.getElementById('batchName').value = '';
             document.getElementById('batchForm').reset();
-        }
+        });
 
-        function closeBatchModal() { document.getElementById('modalBatch').classList.remove('show'); }
-
-        document.getElementById('btnAddBatch').addEventListener('click', openBatchModal);
         document.getElementById('closeBatchModal').addEventListener('click', closeBatchModal);
-        document.getElementById('modalBatch').addEventListener('click', function(e) { if (e.target === this) closeBatchModal(); });
+        document.getElementById('modalBatch').addEventListener('click', function(e) { if (e.target === this)
+            closeBatchModal(); });
 
         document.getElementById('batchForm').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -1840,13 +1808,20 @@
             });
             if (budgetItems.length === 0) { showToast('请至少输入一项预算金额', 'error'); return; }
             batches.push({ id: generateId(), name, budgetItems, actuals: [] });
-            pushDataToFirebase();
-            closeBatchModal();
-            renderAll();
-            showToast(`批次 "${name}" 创建成功`, 'success');
+            // 保存并等待完成
+            pushDataToFirebase()
+                .then(() => {
+                    closeBatchModal();
+                    renderAll();
+                    showToast(`批次 "${name}" 创建成功`, 'success');
+                })
+                .catch((err) => {
+                    console.error('保存失败:', err);
+                    showToast('保存失败，请检查网络或Firebase配置', 'error');
+                });
         });
 
-        // ---- 编辑批次预算 ----
+        // 编辑批次
         function openEditBatchModal(batchId) {
             const batch = batches.find(b => b.id === batchId);
             if (!batch) { showToast('批次不存在', 'error'); return; }
@@ -1868,8 +1843,6 @@
             document.getElementById('modalEditBatch').classList.add('show');
         }
 
-        function closeEditBatchModal() { document.getElementById('modalEditBatch').classList.remove('show'); }
-
         document.getElementById('closeEditBatchModal').addEventListener('click', closeEditBatchModal);
         document.getElementById('modalEditBatch').addEventListener('click', function(e) { if (e.target === this)
                 closeEditBatchModal(); });
@@ -1888,13 +1861,16 @@
             });
             if (budgetItems.length === 0) { showToast('请至少保留一项预算金额', 'error'); return; }
             batch.budgetItems = budgetItems;
-            pushDataToFirebase();
-            closeEditBatchModal();
-            renderAll();
-            showToast(`批次 "${batch.name}" 预算已更新`, 'success');
+            pushDataToFirebase()
+                .then(() => {
+                    closeEditBatchModal();
+                    renderAll();
+                    showToast(`批次 "${batch.name}" 预算已更新`, 'success');
+                })
+                .catch(() => showToast('更新失败', 'error'));
         });
 
-        // ---- 批次实际支出 ----
+        // 录入批次实际支出
         function openBatchActualModal(batchId) {
             const batch = batches.find(b => b.id === batchId);
             if (!batch) return;
@@ -1924,8 +1900,6 @@
             document.getElementById('modalBatchActual').classList.add('show');
         }
 
-        function closeBatchActualModal() { document.getElementById('modalBatchActual').classList.remove('show'); }
-
         document.getElementById('closeBatchActualModal').addEventListener('click', closeBatchActualModal);
         document.getElementById('modalBatchActual').addEventListener('click', function(e) { if (e.target === this)
                 closeBatchActualModal(); });
@@ -1941,14 +1915,17 @@
             const batch = batches.find(b => b.id === batchId);
             if (!batch) { showToast('批次不存在', 'error'); return; }
             batch.actuals.push({ category, amount, date });
-            pushDataToFirebase();
-            closeBatchActualModal();
-            renderAll();
-            showToast(`支出 ${formatCurrency(amount)} 已录入`, 'success');
+            pushDataToFirebase()
+                .then(() => {
+                    closeBatchActualModal();
+                    renderAll();
+                    showToast(`支出 ${formatCurrency(amount)} 已录入`, 'success');
+                })
+                .catch(() => showToast('录入失败', 'error'));
         });
 
-        // ---- 新建月度预算 ----
-        function openMonthlyModal() {
+        // 新建月度预算
+        document.getElementById('btnAddMonthlyBudget').addEventListener('click', function() {
             const modal = document.getElementById('modalMonthlyBudget');
             modal.classList.add('show');
             const container = document.getElementById('monthlyItemsContainer');
@@ -1964,11 +1941,8 @@
             });
             container.innerHTML = html;
             document.getElementById('monthlyMonth').value = '';
-        }
+        });
 
-        function closeMonthlyModal() { document.getElementById('modalMonthlyBudget').classList.remove('show'); }
-
-        document.getElementById('btnAddMonthlyBudget').addEventListener('click', openMonthlyModal);
         document.getElementById('closeMonthlyModal').addEventListener('click', closeMonthlyModal);
         document.getElementById('modalMonthlyBudget').addEventListener('click', function(e) { if (e.target === this)
                 closeMonthlyModal(); });
@@ -1990,13 +1964,16 @@
             });
             if (budgetItems.length === 0) { showToast('请至少输入一项预算金额', 'error'); return; }
             monthlyBudgets.push({ month, budgetItems, actuals: [] });
-            pushDataToFirebase();
-            closeMonthlyModal();
-            renderAll();
-            showToast(`月度预算 ${month} 创建成功`, 'success');
+            pushDataToFirebase()
+                .then(() => {
+                    closeMonthlyModal();
+                    renderAll();
+                    showToast(`月度预算 ${month} 创建成功`, 'success');
+                })
+                .catch(() => showToast('创建失败', 'error'));
         });
 
-        // ---- 编辑月度预算 ----
+        // 编辑月度预算
         function openEditMonthlyModal(month) {
             const monthly = monthlyBudgets.find(m => m.month === month);
             if (!monthly) { showToast('月度预算不存在', 'error'); return; }
@@ -2019,8 +1996,6 @@
             document.getElementById('modalEditMonthly').classList.add('show');
         }
 
-        function closeEditMonthlyModal() { document.getElementById('modalEditMonthly').classList.remove('show'); }
-
         document.getElementById('closeEditMonthlyModal').addEventListener('click', closeEditMonthlyModal);
         document.getElementById('modalEditMonthly').addEventListener('click', function(e) { if (e.target === this)
                 closeEditMonthlyModal(); });
@@ -2039,13 +2014,16 @@
             });
             if (budgetItems.length === 0) { showToast('请至少保留一项预算金额', 'error'); return; }
             monthly.budgetItems = budgetItems;
-            pushDataToFirebase();
-            closeEditMonthlyModal();
-            renderAll();
-            showToast(`月度预算 ${month} 已更新`, 'success');
+            pushDataToFirebase()
+                .then(() => {
+                    closeEditMonthlyModal();
+                    renderAll();
+                    showToast(`月度预算 ${month} 已更新`, 'success');
+                })
+                .catch(() => showToast('更新失败', 'error'));
         });
 
-        // ---- 月度实际支出 ----
+        // 录入月度实际支出
         function openMonthlyActualModal(month) {
             const monthly = monthlyBudgets.find(m => m.month === month);
             if (!monthly) return;
@@ -2075,8 +2053,6 @@
             document.getElementById('modalMonthlyActual').classList.add('show');
         }
 
-        function closeMonthlyActualModal() { document.getElementById('modalMonthlyActual').classList.remove('show'); }
-
         document.getElementById('closeMonthlyActualModal').addEventListener('click', closeMonthlyActualModal);
         document.getElementById('modalMonthlyActual').addEventListener('click', function(e) { if (e.target === this)
                 closeMonthlyActualModal(); });
@@ -2092,13 +2068,18 @@
             const monthly = monthlyBudgets.find(m => m.month === month);
             if (!monthly) { showToast('月度预算不存在', 'error'); return; }
             monthly.actuals.push({ category, amount, date });
-            pushDataToFirebase();
-            closeMonthlyActualModal();
-            renderAll();
-            showToast(`支出 ${formatCurrency(amount)} 已录入`, 'success');
+            pushDataToFirebase()
+                .then(() => {
+                    closeMonthlyActualModal();
+                    renderAll();
+                    showToast(`支出 ${formatCurrency(amount)} 已录入`, 'success');
+                })
+                .catch(() => showToast('录入失败', 'error'));
         });
 
-        // ---- 批次类别管理 ----
+        // ================================================================
+        //  类别管理（批次 & 月度）
+        // ================================================================
         function renderBatchCategoryManager() {
             const container = document.getElementById('batchCategoryListContainer');
             const cats = batchCategories.length ? batchCategories : DEFAULT_BATCH_CATEGORIES;
@@ -2138,22 +2119,22 @@
                         if (!confirm(`确定要删除类别「${cat}」吗？`)) return;
                     }
                     batchCategories = batchCategories.filter(c => c !== cat);
-                    pushDataToFirebase();
-                    renderBatchCategoryManager();
-                    showToast(`已删除类别「${cat}」`, 'success');
+                    pushDataToFirebase()
+                        .then(() => {
+                            renderBatchCategoryManager();
+                            showToast(`已删除类别「${cat}」`, 'success');
+                        })
+                        .catch(() => showToast('删除失败', 'error'));
                 });
             });
         }
 
-        function openBatchCategoryModal() {
+        document.getElementById('btnManageBatchCategories').addEventListener('click', function() {
             document.getElementById('modalBatchCategoryManager').classList.add('show');
             renderBatchCategoryManager();
             document.getElementById('newBatchCategoryInput').value = '';
-        }
+        });
 
-        function closeBatchCategoryModal() { document.getElementById('modalBatchCategoryManager').classList.remove('show'); }
-
-        document.getElementById('btnManageBatchCategories').addEventListener('click', openBatchCategoryModal);
         document.getElementById('closeBatchCategoryModal').addEventListener('click', closeBatchCategoryModal);
         document.getElementById('modalBatchCategoryManager').addEventListener('click', function(e) { if (e.target === this)
                 closeBatchCategoryModal(); });
@@ -2164,16 +2145,15 @@
             if (!val) { showToast('请输入类别名称', 'error'); return; }
             if (batchCategories.includes(val)) { showToast('该类别已存在', 'error'); return; }
             batchCategories.push(val);
-            pushDataToFirebase();
-            renderBatchCategoryManager();
-            input.value = '';
-            showToast(`已添加类别「${val}」`, 'success');
-        });
-        document.getElementById('newBatchCategoryInput').addEventListener('keyup', function(e) {
-            if (e.key === 'Enter') document.getElementById('btnAddBatchCategory').click();
+            pushDataToFirebase()
+                .then(() => {
+                    renderBatchCategoryManager();
+                    input.value = '';
+                    showToast(`已添加类别「${val}」`, 'success');
+                })
+                .catch(() => showToast('添加失败', 'error'));
         });
 
-        // ---- 月度类别管理 ----
         function renderMonthlyCategoryManager() {
             const container = document.getElementById('monthlyCategoryListContainer');
             const cats = monthlyCategories.length ? monthlyCategories : DEFAULT_MONTHLY_CATEGORIES;
@@ -2213,23 +2193,22 @@
                         if (!confirm(`确定要删除类别「${cat}」吗？`)) return;
                     }
                     monthlyCategories = monthlyCategories.filter(c => c !== cat);
-                    pushDataToFirebase();
-                    renderMonthlyCategoryManager();
-                    showToast(`已删除类别「${cat}」`, 'success');
+                    pushDataToFirebase()
+                        .then(() => {
+                            renderMonthlyCategoryManager();
+                            showToast(`已删除类别「${cat}」`, 'success');
+                        })
+                        .catch(() => showToast('删除失败', 'error'));
                 });
             });
         }
 
-        function openMonthlyCategoryModal() {
+        document.getElementById('btnManageMonthlyCategories').addEventListener('click', function() {
             document.getElementById('modalMonthlyCategoryManager').classList.add('show');
             renderMonthlyCategoryManager();
             document.getElementById('newMonthlyCategoryInput').value = '';
-        }
+        });
 
-        function closeMonthlyCategoryModal() { document.getElementById('modalMonthlyCategoryManager').classList.remove(
-            'show'); }
-
-        document.getElementById('btnManageMonthlyCategories').addEventListener('click', openMonthlyCategoryModal);
         document.getElementById('closeMonthlyCategoryModal').addEventListener('click', closeMonthlyCategoryModal);
         document.getElementById('modalMonthlyCategoryManager').addEventListener('click', function(e) { if (e.target === this)
                 closeMonthlyCategoryModal(); });
@@ -2240,13 +2219,13 @@
             if (!val) { showToast('请输入类别名称', 'error'); return; }
             if (monthlyCategories.includes(val)) { showToast('该类别已存在', 'error'); return; }
             monthlyCategories.push(val);
-            pushDataToFirebase();
-            renderMonthlyCategoryManager();
-            input.value = '';
-            showToast(`已添加类别「${val}」`, 'success');
-        });
-        document.getElementById('newMonthlyCategoryInput').addEventListener('keyup', function(e) {
-            if (e.key === 'Enter') document.getElementById('btnAddMonthlyCategory').click();
+            pushDataToFirebase()
+                .then(() => {
+                    renderMonthlyCategoryManager();
+                    input.value = '';
+                    showToast(`已添加类别「${val}」`, 'success');
+                })
+                .catch(() => showToast('添加失败', 'error'));
         });
 
         // ================================================================
