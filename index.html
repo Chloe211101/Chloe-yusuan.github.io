@@ -1731,8 +1731,8 @@
                     .monthlyCategories.length) {
                     batches = data.batches;
                     monthlyBudgets = data.monthlyBudgets;
-                    batchCategories = data.batchCategories.length ? data.batchCategories : DEFAULT_BATCH_CATEGORIES;
-                    monthlyCategories = data.monthlyCategories.length ? data.monthlyCategories :
+                    batchCategories = data.batchCategories || [];
+                   monthlyCategories = data.monthlyCategories || [];
                         DEFAULT_MONTHLY_CATEGORIES;
                     saveLocalCache(data);
                     renderAll();
