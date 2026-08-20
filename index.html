@@ -1732,7 +1732,7 @@
                     batches = data.batches;
                     monthlyBudgets = data.monthlyBudgets;
                     batchCategories = data.batchCategories || [];
-                   monthlyCategories = data.monthlyCategories || [];
+                    monthlyCategories = data.monthlyCategories || [];
                     saveLocalCache(data);
                     renderAll();
                     updateSyncStatus(true);
@@ -1771,7 +1771,7 @@
         }
 
         // ================================================================
-        //  模态框操作（完整保留，略作简化）
+        //  模态框操作（完整保留）
         // ================================================================
         function closeBatchModal() { document.getElementById('modalBatch').classList.remove('show'); }
 
@@ -1790,7 +1790,7 @@
         function closeMonthlyCategoryModal() { document.getElementById('modalMonthlyCategoryManager').classList.remove(
             'show'); }
 
-        // 新建批次（已包含保存后刷新）
+        // 新建批次
         document.getElementById('btnAddBatch').addEventListener('click', function() {
             const modal = document.getElementById('modalBatch');
             modal.classList.add('show');
@@ -2100,56 +2100,57 @@
         //  类别管理（批次 & 月度）
         // ================================================================
         function renderBatchCategoryManager() {
-    const container = document.getElementById('batchCategoryListContainer');
-    const cats = batchCategories.length ? batchCategories ;
-    if (cats.length === 0) {
-        container.innerHTML = `<p class="text-muted text-small">暂无类别，请添加。</p>`;
-        return;
-    }
-    let html = '';
-    cats.forEach(cat => {
-        const usageCount = batches.filter(b =>
-            (b.budgetItems || []).some(item => item.category === cat) ||
-            (b.actuals || []).some(a => a.category === cat)
-        ).length;
-        html += `
-            <div class="category-item">
-                <span class="cat-name">${cat}</span>
-                <div>
-                    <span class="cat-usage">已在 ${usageCount} 个批次中使用</span>
-                    <button class="btn btn-danger btn-sm delete-batch-category-btn" data-category="${cat}">删除</button>
-                </div>
-            </div>
-        `;
-    });
-    container.innerHTML = html;
-
-    container.querySelectorAll('.delete-batch-category-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const cat = this.dataset.category;
-            const usageCount = batches.filter(b =>
-                (b.budgetItems || []).some(item => item.category === cat) ||
-                (b.actuals || []).some(a => a.category === cat)
-            ).length;
-            if (usageCount > 0) {
-                if (!confirm(`类别「${cat}」已在 ${usageCount} 个批次中使用，确定要删除吗？`)) return;
-            } else {
-                if (!confirm(`确定要删除类别「${cat}」吗？`)) return;
+            const container = document.getElementById('batchCategoryListContainer');
+            const cats = batchCategories.length ? batchCategories : DEFAULT_BATCH_CATEGORIES;
+            if (cats.length === 0) {
+                container.innerHTML = `<p class="text-muted text-small">暂无类别，请添加。</p>`;
+                return;
             }
-            batchCategories = batchCategories.filter(c => c !== cat);
-            pushDataToFirebase()
-                .then(() => {
-                    renderBatchCategoryManager();
-                    renderAll();
-                    showToast(`已删除类别「${cat}」`, 'success');
-                })
-                .catch((err) => {
-                    console.error('删除失败:', err);
-                    showToast('删除失败，请检查网络或Firebase配置', 'error');
+            let html = '';
+            cats.forEach(cat => {
+                const usageCount = batches.filter(b =>
+                    (b.budgetItems || []).some(item => item.category === cat) ||
+                    (b.actuals || []).some(a => a.category === cat)
+                ).length;
+                html += `
+                    <div class="category-item">
+                        <span class="cat-name">${cat}</span>
+                        <div>
+                            <span class="cat-usage">已在 ${usageCount} 个批次中使用</span>
+                            <button class="btn btn-danger btn-sm delete-batch-category-btn" data-category="${cat}">删除</button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+
+            container.querySelectorAll('.delete-batch-category-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const cat = this.dataset.category;
+                    const usageCount = batches.filter(b =>
+                        (b.budgetItems || []).some(item => item.category === cat) ||
+                        (b.actuals || []).some(a => a.category === cat)
+                    ).length;
+                    if (usageCount > 0) {
+                        if (!confirm(`类别「${cat}」已在 ${usageCount} 个批次中使用，确定要删除吗？`)) return;
+                    } else {
+                        if (!confirm(`确定要删除类别「${cat}」吗？`)) return;
+                    }
+                    batchCategories = batchCategories.filter(c => c !== cat);
+                    pushDataToFirebase()
+                        .then(() => {
+                            renderBatchCategoryManager();
+                            renderAll();
+                            showToast(`已删除类别「${cat}」`, 'success');
+                        })
+                        .catch((err) => {
+                            console.error('删除失败:', err);
+                            showToast('删除失败，请检查网络或Firebase配置', 'error');
+                        });
                 });
-        });
-    });
-}
+            });
+        }
+
         document.getElementById('btnManageBatchCategories').addEventListener('click', function() {
             document.getElementById('modalBatchCategoryManager').classList.add('show');
             renderBatchCategoryManager();
@@ -2177,7 +2178,7 @@
 
         function renderMonthlyCategoryManager() {
             const container = document.getElementById('monthlyCategoryListContainer');
-            const cats = monthlyCategories.length ? monthlyCategories :;
+            const cats = monthlyCategories.length ? monthlyCategories : DEFAULT_MONTHLY_CATEGORIES;
             if (cats.length === 0) {
                 container.innerHTML = `<p class="text-muted text-small">暂无类别，请添加。</p>`;
                 return;
