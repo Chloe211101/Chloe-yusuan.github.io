@@ -1933,6 +1933,7 @@
             if (!date) { showToast('请选择日期', 'error'); return; }
             const batch = batches.find(b => b.id === batchId);
             if (!batch) { showToast('批次不存在', 'error'); return; }
+            if (!batch.actuals) batch.actuals = [];
             batch.actuals.push({ category, amount, date });
             pushDataToFirebase()
                 .then(() => {
