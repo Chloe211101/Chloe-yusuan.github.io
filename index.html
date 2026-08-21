@@ -729,7 +729,7 @@
         </div>
     </div>
 
-    <!-- ===== 批次实际支出（含备注输入框） ===== -->
+    <!-- 批次实际支出（含备注） -->
     <div class="modal-overlay" id="modalBatchActual">
         <div class="modal-content">
             <button class="modal-close" id="closeBatchActualModal">✕</button>
@@ -1959,7 +1959,7 @@
             }
             document.getElementById('batchActualAmount').value = '';
             document.getElementById('batchActualDate').value = formatDate(new Date());
-            document.getElementById('batchActualNote').value = ''; // 清空备注
+            document.getElementById('batchActualNote').value = '';
             document.getElementById('modalBatchActual').classList.add('show');
         }
 
