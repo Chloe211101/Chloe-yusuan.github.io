@@ -616,6 +616,16 @@
             max-width: 150px;
             word-break: break-word;
         }
+        /* 操作按钮组 */
+        .action-btns {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        .action-btns .btn-sm {
+            padding: 2px 8px;
+            font-size: 11px;
+        }
     </style>
 </head>
 <body>
@@ -692,6 +702,7 @@
     <div class="toast" id="toast"></div>
 
     <!-- ====== 所有模态框 ====== -->
+    <!-- 新建批次 -->
     <div class="modal-overlay" id="modalBatch">
         <div class="modal-content">
             <button class="modal-close" id="closeBatchModal">✕</button>
@@ -710,6 +721,7 @@
         </div>
     </div>
 
+    <!-- 编辑批次 -->
     <div class="modal-overlay" id="modalEditBatch">
         <div class="modal-content">
             <button class="modal-close" id="closeEditBatchModal">✕</button>
@@ -729,14 +741,15 @@
         </div>
     </div>
 
-    <!-- 批次实际支出模态框（含备注） -->
+    <!-- 批次实际支出（添加/编辑共用） -->
     <div class="modal-overlay" id="modalBatchActual">
         <div class="modal-content">
             <button class="modal-close" id="closeBatchActualModal">✕</button>
-            <h2>📝 录入批次实际支出</h2>
+            <h2 id="batchActualModalTitle">📝 录入批次实际支出</h2>
             <p style="margin-bottom:12px; color:var(--text-secondary);" id="batchActualTitle">批次：</p>
             <form id="batchActualForm">
                 <input type="hidden" id="batchActualId" />
+                <input type="hidden" id="batchActualEditId" /> <!-- 编辑时存放支出ID -->
                 <div class="form-group">
                     <label>费用类别 *</label>
                     <select id="batchActualCategory" required></select>
@@ -753,11 +766,12 @@
                     <label>备注（选填）</label>
                     <input type="text" id="batchActualNote" placeholder="如：第一次采购、补货等" maxlength="50" />
                 </div>
-                <button type="submit" class="btn btn-success" style="width:100%; justify-content:center;">保存支出</button>
+                <button type="submit" class="btn btn-success" style="width:100%; justify-content:center;" id="batchActualSubmitBtn">保存支出</button>
             </form>
         </div>
     </div>
 
+    <!-- 月度预算 -->
     <div class="modal-overlay" id="modalMonthlyBudget">
         <div class="modal-content">
             <button class="modal-close" id="closeMonthlyModal">✕</button>
@@ -776,6 +790,7 @@
         </div>
     </div>
 
+    <!-- 编辑月度预算 -->
     <div class="modal-overlay" id="modalEditMonthly">
         <div class="modal-content">
             <button class="modal-close" id="closeEditMonthlyModal">✕</button>
@@ -795,14 +810,15 @@
         </div>
     </div>
 
-    <!-- ===== 月度实际支出模态框（已添加备注） ===== -->
+    <!-- 月度实际支出（添加/编辑共用） -->
     <div class="modal-overlay" id="modalMonthlyActual">
         <div class="modal-content">
             <button class="modal-close" id="closeMonthlyActualModal">✕</button>
-            <h2>📝 录入月度实际支出</h2>
+            <h2 id="monthlyActualModalTitle">📝 录入月度实际支出</h2>
             <p style="margin-bottom:12px; color:var(--text-secondary);" id="monthlyActualTitle">月份：</p>
             <form id="monthlyActualForm">
                 <input type="hidden" id="monthlyActualMonth" />
+                <input type="hidden" id="monthlyActualEditId" />
                 <div class="form-group">
                     <label>费用类别 *</label>
                     <select id="monthlyActualCategory" required></select>
@@ -815,16 +831,16 @@
                     <label>日期 *</label>
                     <input type="date" id="monthlyActualDate" required />
                 </div>
-                <!-- 新增备注输入框 -->
                 <div class="form-group">
                     <label>备注（选填）</label>
                     <input type="text" id="monthlyActualNote" placeholder="如：报销、办公用品等" maxlength="50" />
                 </div>
-                <button type="submit" class="btn btn-success" style="width:100%; justify-content:center;">保存支出</button>
+                <button type="submit" class="btn btn-success" style="width:100%; justify-content:center;" id="monthlyActualSubmitBtn">保存支出</button>
             </form>
         </div>
     </div>
 
+    <!-- 类别管理 -->
     <div class="modal-overlay" id="modalBatchCategoryManager">
         <div class="modal-content">
             <button class="modal-close" id="closeBatchCategoryModal">✕</button>
@@ -1326,6 +1342,7 @@
             });
         }
 
+        // ---- 批次详情（含编辑/删除支出） ----
         function showBatchDetail(id) {
             const batch = batches.find(b => b.id === id);
             if (!batch) return;
@@ -1354,11 +1371,23 @@
             detailHtml += `</tbody></table></div>`;
 
             if (batch.actuals && batch.actuals.length > 0) {
-                detailHtml += `<div style="margin-top:16px;"><strong>📋 实际支出明细</strong></div><div class="table-wrap"><table><thead><tr><th>日期</th><th>类别</th><th>金额</th><th>备注</th></tr></thead><tbody>`;
+                detailHtml += `<div style="margin-top:16px;"><strong>📋 实际支出明细</strong></div><div class="table-wrap"><table><thead><tr><th>日期</th><th>类别</th><th>金额</th><th>备注</th><th>操作</th></tr></thead><tbody>`;
                 const sortedActuals = [...batch.actuals].sort((a, b) => a.date.localeCompare(b.date));
                 sortedActuals.forEach(a => {
-                    detailHtml +=
-                        `<tr><td>${a.date}</td><td>${a.category}</td><td>${formatCurrency(a.amount)}</td><td class="note-cell">${a.note || ''}</td></tr>`;
+                    detailHtml += `
+                        <tr>
+                            <td>${a.date}</td>
+                            <td>${a.category}</td>
+                            <td>${formatCurrency(a.amount)}</td>
+                            <td class="note-cell">${a.note || ''}</td>
+                            <td>
+                                <div class="action-btns">
+                                    <button class="btn btn-warning btn-sm edit-batch-actual" data-batchid="${batch.id}" data-actualid="${a.id}">✏️</button>
+                                    <button class="btn btn-danger btn-sm delete-batch-actual" data-batchid="${batch.id}" data-actualid="${a.id}">🗑️</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
                 });
                 detailHtml += `</tbody></table></div>`;
             } else {
@@ -1381,6 +1410,8 @@
                 </div>
             `;
             document.body.appendChild(modal);
+
+            // 事件绑定
             modal.querySelector('#downloadSingleBatchFromDetail').addEventListener('click', function() {
                 downloadBatchCSV(this.dataset.id);
             });
@@ -1394,8 +1425,310 @@
                 modal.remove();
                 openBatchActualModal(id);
             });
+
+            // 编辑支出
+            modal.querySelectorAll('.edit-batch-actual').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const batchId = this.dataset.batchid;
+                    const actualId = this.dataset.actualid;
+                    modal.remove();
+                    openEditBatchActual(batchId, actualId);
+                });
+            });
+            // 删除支出
+            modal.querySelectorAll('.delete-batch-actual').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const batchId = this.dataset.batchid;
+                    const actualId = this.dataset.actualid;
+                    if (confirm('确定删除该支出记录吗？')) {
+                        deleteBatchActual(batchId, actualId);
+                        modal.remove();
+                    }
+                });
+            });
+
             modal.addEventListener('click', function(e) { if (e.target === this) this.remove(); });
         }
+
+        // ---- 月度详情（含编辑/删除支出） ----
+        function showMonthlyDetail(month) {
+            const monthly = monthlyBudgets.find(m => m.month === month);
+            if (!monthly) return;
+            const cats = monthlyCategories.length ? monthlyCategories : DEFAULT_MONTHLY_CATEGORIES;
+            const allCats = [...new Set([...monthly.budgetItems.map(i => i.category), ...cats])];
+            let detailHtml =
+                `<div style="margin-bottom:12px;"><strong>${month}</strong><span class="text-muted text-small" style="margin-left:12px;">总预算: ${formatCurrency(getMonthlyTotalBudget(monthly))}</span><span class="text-muted text-small">已支出: ${formatCurrency(getMonthlyTotalActual(monthly))}</span></div>
+                <div class="table-wrap"><table><thead><tr><th>类别</th><th>预算</th><th>实际</th><th>差异</th><th>完成%</th></tr></thead><tbody>`;
+            allCats.forEach(cat => {
+                const budgetItem = monthly.budgetItems.find(i => i.category === cat);
+                const budget = budgetItem ? budgetItem.budget : 0;
+                const actual = (monthly.actuals || []).filter(a => a.category === cat).reduce((s, a) => s + a
+                    .amount, 0);
+                const diff = actual - budget;
+                const percent = budget > 0 ? (actual / budget) * 100 : 0;
+                const diffColor = diff > 0 ? 'var(--danger)' : (diff < 0 ? 'var(--success)' :
+                'var(--text-secondary)');
+                detailHtml +=
+                    `<tr><td>${cat}</td><td>${formatCurrency(budget)}</td><td>${formatCurrency(actual)}</td><td style="color:${diffColor};">${diff >= 0 ? '+' : ''}${formatCurrency(diff)}</td><td>${budget > 0 ? percent.toFixed(1) : '-'}%</td></tr>`;
+            });
+            const totalBudget = getMonthlyTotalBudget(monthly);
+            const totalActual = getMonthlyTotalActual(monthly);
+            const totalDiff = totalActual - totalBudget;
+            const totalPercent = totalBudget > 0 ? (totalActual / totalBudget) * 100 : 0;
+            const totalColor = totalDiff > 0 ? 'var(--danger)' : (totalDiff < 0 ? 'var(--success)' :
+            'var(--text-secondary)');
+            detailHtml +=
+                `<tr style="font-weight:700;background:var(--bg);"><td>合计</td><td>${formatCurrency(totalBudget)}</td><td>${formatCurrency(totalActual)}</td><td style="color:${totalColor};">${totalDiff >= 0 ? '+' : ''}${formatCurrency(totalDiff)}</td><td>${totalBudget > 0 ? totalPercent.toFixed(1) : '-'}%</td></tr>`;
+            detailHtml += `</tbody></table></div>`;
+
+            if ((monthly.actuals || []).length > 0) {
+                detailHtml += `<div style="margin-top:16px;"><strong>📋 实际支出明细</strong></div><div class="table-wrap"><table><thead><tr><th>日期</th><th>类别</th><th>金额</th><th>备注</th><th>操作</th></tr></thead><tbody>`;
+                const sortedActuals = [...(monthly.actuals || [])].sort((a, b) => a.date.localeCompare(b.date));
+                sortedActuals.forEach(a => {
+                    detailHtml += `
+                        <tr>
+                            <td>${a.date}</td>
+                            <td>${a.category}</td>
+                            <td>${formatCurrency(a.amount)}</td>
+                            <td class="note-cell">${a.note || ''}</td>
+                            <td>
+                                <div class="action-btns">
+                                    <button class="btn btn-warning btn-sm edit-monthly-actual" data-month="${month}" data-actualid="${a.id}">✏️</button>
+                                    <button class="btn btn-danger btn-sm delete-monthly-actual" data-month="${month}" data-actualid="${a.id}">🗑️</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+                detailHtml += `</tbody></table></div>`;
+            } else {
+                detailHtml += `<div class="text-muted text-small" style="margin-top:12px;">暂无实际支出记录</div>`;
+            }
+
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay show';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width:700px;">
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+                    <h2>📋 月度详情</h2>
+                    ${detailHtml}
+                    <div style="margin-top:16px; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
+                        <button class="btn btn-warning" data-month="${month}" id="downloadMonthlyFromDetail">📥 导出该月度</button>
+                        <button class="btn btn-warning" data-month="${month}" id="editMonthlyFromDetail">✏️ 编辑预算</button>
+                        <button class="btn btn-success" data-month="${month}" id="addMonthlyActualFromDetail">➕ 录入支出</button>
+                        <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">关闭</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            modal.querySelector('#downloadMonthlyFromDetail').addEventListener('click', function() {
+                downloadMonthlyCSV(this.dataset.month);
+            });
+            modal.querySelector('#editMonthlyFromDetail').addEventListener('click', function() {
+                const m = this.dataset.month;
+                modal.remove();
+                openEditMonthlyModal(m);
+            });
+            modal.querySelector('#addMonthlyActualFromDetail').addEventListener('click', function() {
+                const m = this.dataset.month;
+                modal.remove();
+                openMonthlyActualModal(m);
+            });
+
+            modal.querySelectorAll('.edit-monthly-actual').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const month = this.dataset.month;
+                    const actualId = this.dataset.actualid;
+                    modal.remove();
+                    openEditMonthlyActual(month, actualId);
+                });
+            });
+            modal.querySelectorAll('.delete-monthly-actual').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const month = this.dataset.month;
+                    const actualId = this.dataset.actualid;
+                    if (confirm('确定删除该支出记录吗？')) {
+                        deleteMonthlyActual(month, actualId);
+                        modal.remove();
+                    }
+                });
+            });
+
+            modal.addEventListener('click', function(e) { if (e.target === this) this.remove(); });
+        }
+
+        // ---- 编辑批次支出 ----
+        function openEditBatchActual(batchId, actualId) {
+            const batch = batches.find(b => b.id === batchId);
+            if (!batch) return;
+            const actual = batch.actuals.find(a => a.id === actualId);
+            if (!actual) { showToast('支出记录不存在', 'error'); return; }
+
+            document.getElementById('batchActualId').value = batchId;
+            document.getElementById('batchActualEditId').value = actualId;
+            document.getElementById('batchActualTitle').textContent = `批次：${batch.name}（编辑支出）`;
+            document.getElementById('batchActualModalTitle').textContent = '✏️ 编辑支出';
+
+            // 填充数据
+            const select = document.getElementById('batchActualCategory');
+            select.innerHTML = '';
+            const cats = batch.budgetItems.map(item => item.category);
+            if (cats.length === 0) {
+                (batchCategories.length ? batchCategories : DEFAULT_BATCH_CATEGORIES).forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c;
+                    opt.textContent = c;
+                    if (c === actual.category) opt.selected = true;
+                    select.appendChild(opt);
+                });
+            } else {
+                cats.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c;
+                    opt.textContent = c;
+                    if (c === actual.category) opt.selected = true;
+                    select.appendChild(opt);
+                });
+            }
+            document.getElementById('batchActualAmount').value = actual.amount;
+            document.getElementById('batchActualDate').value = actual.date;
+            document.getElementById('batchActualNote').value = actual.note || '';
+            document.getElementById('batchActualSubmitBtn').textContent = '更新支出';
+            document.getElementById('modalBatchActual').classList.add('show');
+        }
+
+        // ---- 编辑月度支出 ----
+        function openEditMonthlyActual(month, actualId) {
+            const monthly = monthlyBudgets.find(m => m.month === month);
+            if (!monthly) return;
+            const actual = monthly.actuals.find(a => a.id === actualId);
+            if (!actual) { showToast('支出记录不存在', 'error'); return; }
+
+            document.getElementById('monthlyActualMonth').value = month;
+            document.getElementById('monthlyActualEditId').value = actualId;
+            document.getElementById('monthlyActualTitle').textContent = `月份：${month}（编辑支出）`;
+            document.getElementById('monthlyActualModalTitle').textContent = '✏️ 编辑支出';
+
+            const select = document.getElementById('monthlyActualCategory');
+            select.innerHTML = '';
+            const cats = monthly.budgetItems.map(item => item.category);
+            if (cats.length === 0) {
+                (monthlyCategories.length ? monthlyCategories : DEFAULT_MONTHLY_CATEGORIES).forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c;
+                    opt.textContent = c;
+                    if (c === actual.category) opt.selected = true;
+                    select.appendChild(opt);
+                });
+            } else {
+                cats.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c;
+                    opt.textContent = c;
+                    if (c === actual.category) opt.selected = true;
+                    select.appendChild(opt);
+                });
+            }
+            document.getElementById('monthlyActualAmount').value = actual.amount;
+            document.getElementById('monthlyActualDate').value = actual.date;
+            document.getElementById('monthlyActualNote').value = actual.note || '';
+            document.getElementById('monthlyActualSubmitBtn').textContent = '更新支出';
+            document.getElementById('modalMonthlyActual').classList.add('show');
+        }
+
+        // ---- 删除批次支出 ----
+        function deleteBatchActual(batchId, actualId) {
+            const batch = batches.find(b => b.id === batchId);
+            if (!batch) return;
+            batch.actuals = batch.actuals.filter(a => a.id !== actualId);
+            pushDataToFirebase().then(() => {
+                renderAll();
+                showToast('支出已删除', 'success');
+            }).catch(() => showToast('删除失败', 'error'));
+        }
+
+        // ---- 删除月度支出 ----
+        function deleteMonthlyActual(month, actualId) {
+            const monthly = monthlyBudgets.find(m => m.month === month);
+            if (!monthly) return;
+            monthly.actuals = monthly.actuals.filter(a => a.id !== actualId);
+            pushDataToFirebase().then(() => {
+                renderAll();
+                showToast('支出已删除', 'success');
+            }).catch(() => showToast('删除失败', 'error'));
+        }
+
+        // ---- 批次支出提交（新增/编辑） ----
+        document.getElementById('batchActualForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const batchId = document.getElementById('batchActualId').value;
+            const editId = document.getElementById('batchActualEditId').value;
+            const category = document.getElementById('batchActualCategory').value;
+            const amount = parseFloat(document.getElementById('batchActualAmount').value);
+            const date = document.getElementById('batchActualDate').value;
+            const note = document.getElementById('batchActualNote').value.trim();
+            if (!amount || amount <= 0) { showToast('请输入有效金额', 'error'); return; }
+            if (!date) { showToast('请选择日期', 'error'); return; }
+            const batch = batches.find(b => b.id === batchId);
+            if (!batch) { showToast('批次不存在', 'error'); return; }
+            if (!batch.actuals) batch.actuals = [];
+            if (editId) {
+                // 编辑模式
+                const idx = batch.actuals.findIndex(a => a.id === editId);
+                if (idx === -1) { showToast('支出记录不存在', 'error'); return; }
+                batch.actuals[idx] = { id: editId, category, amount, date, note };
+            } else {
+                // 新增模式
+                const newId = generateId();
+                batch.actuals.push({ id: newId, category, amount, date, note });
+            }
+            pushDataToFirebase().then(() => {
+                closeBatchActualModal();
+                renderAll();
+                showToast(editId ? '支出已更新' : `支出 ${formatCurrency(amount)} 已录入`, 'success');
+            }).catch(() => showToast('保存失败', 'error'));
+        });
+
+        // ---- 月度支出提交（新增/编辑） ----
+        document.getElementById('monthlyActualForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const month = document.getElementById('monthlyActualMonth').value;
+            const editId = document.getElementById('monthlyActualEditId').value;
+            const category = document.getElementById('monthlyActualCategory').value;
+            const amount = parseFloat(document.getElementById('monthlyActualAmount').value);
+            const date = document.getElementById('monthlyActualDate').value;
+            const note = document.getElementById('monthlyActualNote').value.trim();
+            if (!amount || amount <= 0) { showToast('请输入有效金额', 'error'); return; }
+            if (!date) { showToast('请选择日期', 'error'); return; }
+            const monthly = monthlyBudgets.find(m => m.month === month);
+            if (!monthly) { showToast('月度预算不存在', 'error'); return; }
+            if (!monthly.actuals) monthly.actuals = [];
+            if (editId) {
+                const idx = monthly.actuals.findIndex(a => a.id === editId);
+                if (idx === -1) { showToast('支出记录不存在', 'error'); return; }
+                monthly.actuals[idx] = { id: editId, category, amount, date, note };
+            } else {
+                const newId = generateId();
+                monthly.actuals.push({ id: newId, category, amount, date, note });
+            }
+            pushDataToFirebase().then(() => {
+                closeMonthlyActualModal();
+                renderAll();
+                showToast(editId ? '支出已更新' : `支出 ${formatCurrency(amount)} 已录入`, 'success');
+            }).catch(() => showToast('保存失败', 'error'));
+        });
+
+        // ================================================================
+        //  其他渲染函数（renderMonthlyBudgets, renderAlerts, renderAll 等）
+        //  由于篇幅限制，这些函数与之前版本相同，但都调用了上述详情函数。
+        //  此处省略完整定义，实际代码中需包含完整实现。
+        //  但为了完整性，我在下方提供完整函数。
+        // ================================================================
 
         function renderMonthlyBudgets() {
             const container = document.getElementById('monthlyBudgetList');
@@ -1471,78 +1804,6 @@
                     }
                 });
             });
-        }
-
-        function showMonthlyDetail(month) {
-            const monthly = monthlyBudgets.find(m => m.month === month);
-            if (!monthly) return;
-            const cats = monthlyCategories.length ? monthlyCategories : DEFAULT_MONTHLY_CATEGORIES;
-            const allCats = [...new Set([...monthly.budgetItems.map(i => i.category), ...cats])];
-            let detailHtml =
-                `<div style="margin-bottom:12px;"><strong>${month}</strong><span class="text-muted text-small" style="margin-left:12px;">总预算: ${formatCurrency(getMonthlyTotalBudget(monthly))}</span><span class="text-muted text-small">已支出: ${formatCurrency(getMonthlyTotalActual(monthly))}</span></div>
-                <div class="table-wrap"><table><thead><tr><th>类别</th><th>预算</th><th>实际</th><th>差异</th><th>完成%</th></tr></thead><tbody>`;
-            allCats.forEach(cat => {
-                const budgetItem = monthly.budgetItems.find(i => i.category === cat);
-                const budget = budgetItem ? budgetItem.budget : 0;
-                const actual = (monthly.actuals || []).filter(a => a.category === cat).reduce((s, a) => s + a
-                    .amount, 0);
-                const diff = actual - budget;
-                const percent = budget > 0 ? (actual / budget) * 100 : 0;
-                const diffColor = diff > 0 ? 'var(--danger)' : (diff < 0 ? 'var(--success)' :
-                'var(--text-secondary)');
-                detailHtml +=
-                    `<tr><td>${cat}</td><td>${formatCurrency(budget)}</td><td>${formatCurrency(actual)}</td><td style="color:${diffColor};">${diff >= 0 ? '+' : ''}${formatCurrency(diff)}</td><td>${budget > 0 ? percent.toFixed(1) : '-'}%</td></tr>`;
-            });
-            const totalBudget = getMonthlyTotalBudget(monthly);
-            const totalActual = getMonthlyTotalActual(monthly);
-            const totalDiff = totalActual - totalBudget;
-            const totalPercent = totalBudget > 0 ? (totalActual / totalBudget) * 100 : 0;
-            const totalColor = totalDiff > 0 ? 'var(--danger)' : (totalDiff < 0 ? 'var(--success)' :
-            'var(--text-secondary)');
-            detailHtml +=
-                `<tr style="font-weight:700;background:var(--bg);"><td>合计</td><td>${formatCurrency(totalBudget)}</td><td>${formatCurrency(totalActual)}</td><td style="color:${totalColor};">${totalDiff >= 0 ? '+' : ''}${formatCurrency(totalDiff)}</td><td>${totalBudget > 0 ? totalPercent.toFixed(1) : '-'}%</td></tr>`;
-            detailHtml += `</tbody></table></div>`;
-            if ((monthly.actuals || []).length > 0) {
-                detailHtml += `<div style="margin-top:16px;"><strong>📋 实际支出明细</strong></div><div class="table-wrap"><table><thead><tr><th>日期</th><th>类别</th><th>金额</th><th>备注</th></tr></thead><tbody>`;
-                const sortedActuals = [...(monthly.actuals || [])].sort((a, b) => a.date.localeCompare(b.date));
-                sortedActuals.forEach(a => {
-                    detailHtml +=
-                        `<tr><td>${a.date}</td><td>${a.category}</td><td>${formatCurrency(a.amount)}</td><td>${a.note || ''}</td></tr>`;
-                });
-                detailHtml += `</tbody></table></div>`;
-            } else {
-                detailHtml += `<div class="text-muted text-small" style="margin-top:12px;">暂无实际支出记录</div>`;
-            }
-            const modal = document.createElement('div');
-            modal.className = 'modal-overlay show';
-            modal.innerHTML = `
-                <div class="modal-content" style="max-width:700px;">
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
-                    <h2>📋 月度详情</h2>
-                    ${detailHtml}
-                    <div style="margin-top:16px; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
-                        <button class="btn btn-warning" data-month="${month}" id="downloadMonthlyFromDetail">📥 导出该月度</button>
-                        <button class="btn btn-warning" data-month="${month}" id="editMonthlyFromDetail">✏️ 编辑预算</button>
-                        <button class="btn btn-success" data-month="${month}" id="addMonthlyActualFromDetail">➕ 录入支出</button>
-                        <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">关闭</button>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-            modal.querySelector('#downloadMonthlyFromDetail').addEventListener('click', function() {
-                downloadMonthlyCSV(this.dataset.month);
-            });
-            modal.querySelector('#editMonthlyFromDetail').addEventListener('click', function() {
-                const m = this.dataset.month;
-                modal.remove();
-                openEditMonthlyModal(m);
-            });
-            modal.querySelector('#addMonthlyActualFromDetail').addEventListener('click', function() {
-                const m = this.dataset.month;
-                modal.remove();
-                openMonthlyActualModal(m);
-            });
-            modal.addEventListener('click', function(e) { if (e.target === this) this.remove(); });
         }
 
         function renderAlerts() {
@@ -1709,11 +1970,11 @@
                     { category: '配件', budget: 2200 }
                 ],
                 actuals: [
-                    { category: '不锈钢板', amount: 11000, date: '2025-08-05', note: '第一批采购' },
-                    { category: '酸洗', amount: 2800, date: '2025-08-07', note: '酸洗加工费' },
-                    { category: '镀色', amount: 4200, date: '2025-08-10', note: '镀色费用' },
-                    { category: '外购成品', amount: 6500, date: '2025-08-12', note: '外购配件' },
-                    { category: '配件', amount: 2100, date: '2025-08-14', note: '补货' }
+                    { id: 'act1', category: '不锈钢板', amount: 11000, date: '2025-08-05', note: '第一批采购' },
+                    { id: 'act2', category: '酸洗', amount: 2800, date: '2025-08-07', note: '酸洗加工费' },
+                    { id: 'act3', category: '镀色', amount: 4200, date: '2025-08-10', note: '镀色费用' },
+                    { id: 'act4', category: '外购成品', amount: 6500, date: '2025-08-12', note: '外购配件' },
+                    { id: 'act5', category: '配件', amount: 2100, date: '2025-08-14', note: '补货' }
                 ]
             }, {
                 id: 'sample2',
@@ -1730,10 +1991,10 @@
                     { category: '配件', budget: 1500 }
                 ],
                 actuals: [
-                    { category: '不锈钢板', amount: 8500, date: '2025-08-08', note: '第一次' },
-                    { category: '不锈钢管', amount: 5500, date: '2025-08-09', note: '第二次' },
-                    { category: '激光', amount: 1900, date: '2025-08-11', note: '激光切割' },
-                    { category: '配件', amount: 1600, date: '2025-08-13', note: '追加' }
+                    { id: 'act6', category: '不锈钢板', amount: 8500, date: '2025-08-08', note: '第一次' },
+                    { id: 'act7', category: '不锈钢管', amount: 5500, date: '2025-08-09', note: '第二次' },
+                    { id: 'act8', category: '激光', amount: 1900, date: '2025-08-11', note: '激光切割' },
+                    { id: 'act9', category: '配件', amount: 1600, date: '2025-08-13', note: '追加' }
                 ]
             }];
         }
@@ -1750,10 +2011,10 @@
                     cat === '水电' ? 1500 : 0
             }));
             const actuals = [
-                { category: '办公费用', amount: 2800, date: '2025-08-03', note: '办公用品' },
-                { category: '房租', amount: 8000, date: '2025-08-05', note: '8月房租' },
-                { category: '社保', amount: 6200, date: '2025-08-15', note: '社保缴纳' },
-                { category: '宁波办公室工资', amount: 51000, date: '2025-08-20', note: '8月工资' }
+                { id: 'mact1', category: '办公费用', amount: 2800, date: '2025-08-03', note: '办公用品' },
+                { id: 'mact2', category: '房租', amount: 8000, date: '2025-08-05', note: '8月房租' },
+                { id: 'mact3', category: '社保', amount: 6200, date: '2025-08-15', note: '社保缴纳' },
+                { id: 'mact4', category: '宁波办公室工资', amount: 51000, date: '2025-08-20', note: '8月工资' }
             ];
             return [{ month: '2025-08', budgetItems, actuals }];
         }
@@ -1826,13 +2087,24 @@
 
         function closeEditBatchModal() { document.getElementById('modalEditBatch').classList.remove('show'); }
 
-        function closeBatchActualModal() { document.getElementById('modalBatchActual').classList.remove('show'); }
+        function closeBatchActualModal() {
+            document.getElementById('modalBatchActual').classList.remove('show');
+            // 重置为添加模式
+            document.getElementById('batchActualEditId').value = '';
+            document.getElementById('batchActualModalTitle').textContent = '📝 录入批次实际支出';
+            document.getElementById('batchActualSubmitBtn').textContent = '保存支出';
+        }
 
         function closeMonthlyModal() { document.getElementById('modalMonthlyBudget').classList.remove('show'); }
 
         function closeEditMonthlyModal() { document.getElementById('modalEditMonthly').classList.remove('show'); }
 
-        function closeMonthlyActualModal() { document.getElementById('modalMonthlyActual').classList.remove('show'); }
+        function closeMonthlyActualModal() {
+            document.getElementById('modalMonthlyActual').classList.remove('show');
+            document.getElementById('monthlyActualEditId').value = '';
+            document.getElementById('monthlyActualModalTitle').textContent = '📝 录入月度实际支出';
+            document.getElementById('monthlyActualSubmitBtn').textContent = '保存支出';
+        }
 
         function closeBatchCategoryModal() { document.getElementById('modalBatchCategoryManager').classList.remove('show'); }
 
@@ -1937,12 +2209,17 @@
                 .catch(() => showToast('更新失败', 'error'));
         });
 
-        // 录入批次实际支出（含备注）
+        // 录入批次实际支出（打开模态框）
         function openBatchActualModal(batchId) {
             const batch = batches.find(b => b.id === batchId);
             if (!batch) return;
+            // 重置为添加模式
             document.getElementById('batchActualId').value = batchId;
+            document.getElementById('batchActualEditId').value = '';
             document.getElementById('batchActualTitle').textContent = `批次：${batch.name}`;
+            document.getElementById('batchActualModalTitle').textContent = '📝 录入批次实际支出';
+            document.getElementById('batchActualSubmitBtn').textContent = '保存支出';
+
             const select = document.getElementById('batchActualCategory');
             select.innerHTML = '';
             const categories = batch.budgetItems.map(item => item.category);
@@ -1971,28 +2248,6 @@
         document.getElementById('closeBatchActualModal').addEventListener('click', closeBatchActualModal);
         document.getElementById('modalBatchActual').addEventListener('click', function(e) { if (e.target === this)
                 closeBatchActualModal(); });
-
-        document.getElementById('batchActualForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const batchId = document.getElementById('batchActualId').value;
-            const category = document.getElementById('batchActualCategory').value;
-            const amount = parseFloat(document.getElementById('batchActualAmount').value);
-            const date = document.getElementById('batchActualDate').value;
-            const note = document.getElementById('batchActualNote').value.trim();
-            if (!amount || amount <= 0) { showToast('请输入有效金额', 'error'); return; }
-            if (!date) { showToast('请选择日期', 'error'); return; }
-            const batch = batches.find(b => b.id === batchId);
-            if (!batch) { showToast('批次不存在', 'error'); return; }
-            if (!batch.actuals) batch.actuals = [];
-            batch.actuals.push({ category, amount, date, note });
-            pushDataToFirebase()
-                .then(() => {
-                    closeBatchActualModal();
-                    renderAll();
-                    showToast(`支出 ${formatCurrency(amount)} 已录入`, 'success');
-                })
-                .catch(() => showToast('录入失败', 'error'));
-        });
 
         // 新建月度预算
         document.getElementById('btnAddMonthlyBudget').addEventListener('click', function() {
@@ -2093,12 +2348,16 @@
                 .catch(() => showToast('更新失败', 'error'));
         });
 
-        // ===== 录入月度实际支出（含备注） =====
+        // 录入月度实际支出（打开模态框）
         function openMonthlyActualModal(month) {
             const monthly = monthlyBudgets.find(m => m.month === month);
             if (!monthly) return;
             document.getElementById('monthlyActualMonth').value = month;
+            document.getElementById('monthlyActualEditId').value = '';
             document.getElementById('monthlyActualTitle').textContent = `月份：${month}`;
+            document.getElementById('monthlyActualModalTitle').textContent = '📝 录入月度实际支出';
+            document.getElementById('monthlyActualSubmitBtn').textContent = '保存支出';
+
             const select = document.getElementById('monthlyActualCategory');
             select.innerHTML = '';
             const categories = monthly.budgetItems.map(item => item.category);
@@ -2120,38 +2379,13 @@
             }
             document.getElementById('monthlyActualAmount').value = '';
             document.getElementById('monthlyActualDate').value = formatDate(new Date());
-            document.getElementById('monthlyActualNote').value = '';  // 清空备注
+            document.getElementById('monthlyActualNote').value = '';
             document.getElementById('modalMonthlyActual').classList.add('show');
         }
 
         document.getElementById('closeMonthlyActualModal').addEventListener('click', closeMonthlyActualModal);
         document.getElementById('modalMonthlyActual').addEventListener('click', function(e) { if (e.target === this)
                 closeMonthlyActualModal(); });
-
-        document.getElementById('monthlyActualForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const month = document.getElementById('monthlyActualMonth').value;
-            const category = document.getElementById('monthlyActualCategory').value;
-            const amount = parseFloat(document.getElementById('monthlyActualAmount').value);
-            const date = document.getElementById('monthlyActualDate').value;
-            const note = document.getElementById('monthlyActualNote').value.trim();  // 读取备注
-            if (!amount || amount <= 0) { showToast('请输入有效金额', 'error'); return; }
-            if (!date) { showToast('请选择日期', 'error'); return; }
-            const monthly = monthlyBudgets.find(m => m.month === month);
-            if (!monthly) { showToast('月度预算不存在', 'error'); return; }
-            if (!monthly.actuals) monthly.actuals = []; // 确保数组存在
-            monthly.actuals.push({ category, amount, date, note });
-            pushDataToFirebase()
-                .then(() => {
-                    closeMonthlyActualModal();
-                    renderAll();
-                    showToast(`支出 ${formatCurrency(amount)} 已录入`, 'success');
-                })
-                .catch((err) => {
-                    console.error('保存失败:', err);
-                    showToast('录入失败，请检查网络', 'error');
-                });
-        });
 
         // ================================================================
         //  类别管理（批次 & 月度）
