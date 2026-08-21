@@ -1155,7 +1155,7 @@
             displayCats.forEach(cat => {
                 const budgetItem = monthly.budgetItems.find(i => i.category === cat);
                 const budget = budgetItem ? budgetItem.budget : 0;
-                const actual = monthly.actuals.filter(a => a.category === cat).reduce((s, a) => s + a.amount, 0);
+                const actual = (monthly.actuals || []).filter(a => a.category === cat).reduce((s, a) => s + a.amount, 0);
                 const diff = actual - budget;
                 const diffPercent = budget > 0 ? (diff / budget) * 100 : 0;
                 const completePercent = budget > 0 ? (actual / budget) * 100 : 0;
