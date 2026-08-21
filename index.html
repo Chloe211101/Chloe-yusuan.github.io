@@ -1502,7 +1502,7 @@
             detailHtml +=
                 `<tr style="font-weight:700;background:var(--bg);"><td>合计</td><td>${formatCurrency(totalBudget)}</td><td>${formatCurrency(totalActual)}</td><td style="color:${totalColor};">${totalDiff >= 0 ? '+' : ''}${formatCurrency(totalDiff)}</td><td>${totalBudget > 0 ? totalPercent.toFixed(1) : '-'}%</td></tr>`;
             detailHtml += `</tbody></table></div>`;
-            if (monthly.actuals.length > 0) {
+           if ((monthly.actuals || []).length > 0)
                 detailHtml += `<div style="margin-top:16px;"><strong>📋 实际支出明细</strong></div><div class="table-wrap"><table><thead><tr><th>日期</th><th>类别</th><th>金额</th><th>备注</th></tr></thead><tbody>`;
                 const sortedActuals = [...monthly.actuals].sort((a, b) => a.date.localeCompare(b.date));
                 sortedActuals.forEach(a => {
