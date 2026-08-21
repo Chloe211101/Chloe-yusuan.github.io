@@ -9,7 +9,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js">
     </script>
     <style>
-        /* ====== 样式（完整版） ====== */
         :root {
             --primary: #1E3A8A;
             --primary-light: #3B82F6;
@@ -730,6 +729,7 @@
         </div>
     </div>
 
+    <!-- ===== 批次实际支出（含备注输入框） ===== -->
     <div class="modal-overlay" id="modalBatchActual">
         <div class="modal-content">
             <button class="modal-close" id="closeBatchActualModal">✕</button>
@@ -749,6 +749,7 @@
                     <label>日期 *</label>
                     <input type="date" id="batchActualDate" required />
                 </div>
+                <!-- 备注输入框 -->
                 <div class="form-group">
                     <label>备注（选填）</label>
                     <input type="text" id="batchActualNote" placeholder="如：第一次采购、补货等" maxlength="50" />
@@ -982,7 +983,6 @@
 
         function formatCurrency(v) { return '¥' + Number(v).toFixed(2); }
 
-        // 修复：使用 || [] 防止 undefined 报错
         function getBatchTotalBudget(b) {
             return (b.budgetItems || []).reduce((s, i) => s + i.budget, 0);
         }
@@ -1043,7 +1043,7 @@
         }
 
         // ================================================================
-        //  CSV 导出（略，保持原有功能）
+        //  CSV 导出（已修复，所有数组都做了防御）
         // ================================================================
         function downloadCSV(csvString, filename) {
             const BOM = '\uFEFF';
@@ -1086,7 +1086,7 @@
             rows.push([]);
             rows.push(['实际支出明细']);
             rows.push(['日期', '类别', '金额', '备注']);
-            if (batch.actuals.length > 0) {
+            if (batch.actuals && batch.actuals.length > 0) {
                 batch.actuals.forEach(a => rows.push([a.date, a.category, a.amount.toFixed(2), a.note || '']));
             } else {
                 rows.push(['', '无实际支出', '', '']);
@@ -1109,8 +1109,8 @@
                     const diff = actual - budget;
                     const diffPercent = budget > 0 ? (diff / budget) * 100 : 0;
                     const completePercent = budget > 0 ? (actual / budget) * 100 : 0;
-                    rows.push([batch.name, cat, budget.toFixed(2), actual.toFixed(2), diff.toFixed(2), diffPercent
-                        .toFixed(1), completePercent.toFixed(1)
+                    rows.push([batch.name, cat, budget.toFixed(2), actual.toFixed(2), diff.toFixed(2), diffPercent.toFixed(1),
+                        completePercent.toFixed(1)
                     ]);
                 });
                 const totalBudget = getBatchTotalBudget(batch);
@@ -1122,10 +1122,9 @@
                     totalDiffPercent.toFixed(1), totalCompletePercent.toFixed(1)
                 ]);
                 rows.push([]);
-                // 导出该批次的所有支出明细（含备注）
                 rows.push([batch.name + ' 支出明细']);
                 rows.push(['日期', '类别', '金额', '备注']);
-                if (batch.actuals.length > 0) {
+                if (batch.actuals && batch.actuals.length > 0) {
                     batch.actuals.forEach(a => rows.push([a.date, a.category, a.amount.toFixed(2), a.note || '']));
                 } else {
                     rows.push(['', '无实际支出', '', '']);
@@ -1145,14 +1144,14 @@
             ];
             const cats = monthlyCategories.length ? monthlyCategories : DEFAULT_MONTHLY_CATEGORIES;
             const existingCats = new Set([
-                ...monthly.budgetItems.map(i => i.category),
-                ...monthly.actuals.map(a => a.category)
+                ...(monthly.budgetItems || []).map(i => i.category),
+                ...(monthly.actuals || []).map(a => a.category)
             ]);
             const displayCats = existingCats.size > 0 ? [...existingCats] : cats;
             displayCats.forEach(cat => {
-                const budgetItem = monthly.budgetItems.find(i => i.category === cat);
+                const budgetItem = (monthly.budgetItems || []).find(i => i.category === cat);
                 const budget = budgetItem ? budgetItem.budget : 0;
-                const actual = monthly.actuals.filter(a => a.category === cat).reduce((s, a) => s + a.amount, 0);
+                const actual = (monthly.actuals || []).filter(a => a.category === cat).reduce((s, a) => s + a.amount, 0);
                 const diff = actual - budget;
                 const diffPercent = budget > 0 ? (diff / budget) * 100 : 0;
                 const completePercent = budget > 0 ? (actual / budget) * 100 : 0;
@@ -1171,7 +1170,7 @@
             rows.push([]);
             rows.push(['实际支出明细']);
             rows.push(['日期', '类别', '金额', '备注']);
-            if (monthly.actuals.length > 0) {
+            if (monthly.actuals && monthly.actuals.length > 0) {
                 monthly.actuals.forEach(a => rows.push([a.date, a.category, a.amount.toFixed(2), a.note || '']));
             } else {
                 rows.push(['', '无实际支出', '', '']);
@@ -1189,20 +1188,19 @@
             const cats = monthlyCategories.length ? monthlyCategories : DEFAULT_MONTHLY_CATEGORIES;
             monthlyBudgets.forEach(monthly => {
                 const existingCats = new Set([
-                    ...monthly.budgetItems.map(i => i.category),
-                    ...monthly.actuals.map(a => a.category)
+                    ...(monthly.budgetItems || []).map(i => i.category),
+                    ...(monthly.actuals || []).map(a => a.category)
                 ]);
                 const displayCats = existingCats.size > 0 ? [...existingCats] : cats;
                 displayCats.forEach(cat => {
-                    const budgetItem = monthly.budgetItems.find(i => i.category === cat);
+                    const budgetItem = (monthly.budgetItems || []).find(i => i.category === cat);
                     const budget = budgetItem ? budgetItem.budget : 0;
-                    const actual = monthly.actuals.filter(a => a.category === cat).reduce((s, a) => s + a
-                        .amount, 0);
+                    const actual = (monthly.actuals || []).filter(a => a.category === cat).reduce((s, a) => s + a.amount, 0);
                     const diff = actual - budget;
                     const diffPercent = budget > 0 ? (diff / budget) * 100 : 0;
                     const completePercent = budget > 0 ? (actual / budget) * 100 : 0;
-                    rows.push([monthly.month, cat, budget.toFixed(2), actual.toFixed(2), diff.toFixed(2),
-                        diffPercent.toFixed(1), completePercent.toFixed(1)
+                    rows.push([monthly.month, cat, budget.toFixed(2), actual.toFixed(2), diff.toFixed(2), diffPercent.toFixed(1),
+                        completePercent.toFixed(1)
                     ]);
                 });
                 const totalBudget = getMonthlyTotalBudget(monthly);
@@ -1210,13 +1208,13 @@
                 const totalDiff = totalActual - totalBudget;
                 const totalDiffPercent = totalBudget > 0 ? (totalDiff / totalBudget) * 100 : 0;
                 const totalCompletePercent = totalBudget > 0 ? (totalActual / totalBudget) * 100 : 0;
-                rows.push([monthly.month + ' (合计)', '', totalBudget.toFixed(2), totalActual.toFixed(2), totalDiff
-                    .toFixed(2), totalDiffPercent.toFixed(1), totalCompletePercent.toFixed(1)
+                rows.push([monthly.month + ' (合计)', '', totalBudget.toFixed(2), totalActual.toFixed(2), totalDiff.toFixed(2),
+                    totalDiffPercent.toFixed(1), totalCompletePercent.toFixed(1)
                 ]);
                 rows.push([]);
                 rows.push([monthly.month + ' 支出明细']);
                 rows.push(['日期', '类别', '金额', '备注']);
-                if (monthly.actuals.length > 0) {
+                if (monthly.actuals && monthly.actuals.length > 0) {
                     monthly.actuals.forEach(a => rows.push([a.date, a.category, a.amount.toFixed(2), a.note || '']));
                 } else {
                     rows.push(['', '无实际支出', '', '']);
@@ -1350,7 +1348,6 @@
                 `<tr style="font-weight:700;background:var(--bg);"><td>合计</td><td>${formatCurrency(totalBudget)}</td><td>${formatCurrency(totalActual)}</td><td style="color:${totalColor};">${totalDiff >= 0 ? '+' : ''}${formatCurrency(totalDiff)}</td><td>${totalBudget > 0 ? totalPercent.toFixed(1) : '-'}%</td></tr>`;
             detailHtml += `</tbody></table></div>`;
 
-            // 显示该批次所有实际支出明细（含备注），按日期排序
             if (batch.actuals && batch.actuals.length > 0) {
                 detailHtml += `<div style="margin-top:16px;"><strong>📋 实际支出明细</strong></div><div class="table-wrap"><table><thead><tr><th>日期</th><th>类别</th><th>金额</th><th>备注</th></tr></thead><tbody>`;
                 const sortedActuals = [...batch.actuals].sort((a, b) => a.date.localeCompare(b.date));
@@ -1471,7 +1468,6 @@
             });
         }
 
-        // ===== 修复后的 showMonthlyDetail（防御 monthly.actuals 为 undefined）=====
         function showMonthlyDetail(month) {
             const monthly = monthlyBudgets.find(m => m.month === month);
             if (!monthly) return;
@@ -1612,7 +1608,7 @@
         }
 
         // ================================================================
-        //  数据同步（返回 Promise）
+        //  数据同步
         // ================================================================
         function pushDataToFirebase() {
             return new Promise((resolve, reject) => {
@@ -1653,18 +1649,15 @@
             }
         }
 
-        // ================================================================
-        //  数据监听（关键修复：调用 renderAll）
-        // ================================================================
         function onRemoteDataUpdate(data) {
-            if (pushPending) return; // 避免循环
+            if (pushPending) return;
             console.log('📦 收到远程更新，刷新页面');
             batches = data.batches || [];
             monthlyBudgets = data.monthlyBudgets || [];
             batchCategories = data.batchCategories || [];
             monthlyCategories = data.monthlyCategories || [];
             saveLocalCache(data);
-            renderAll();   // ★ 关键：触发界面刷新
+            renderAll();
             updateSyncStatus(true);
         }
 
@@ -1677,9 +1670,6 @@
             unlistenFn = listenDataChange(onRemoteDataUpdate);
         }
 
-        // ================================================================
-        //  强制从 Firebase 重新加载数据（用于删除类别后刷新）
-        // ================================================================
         function reloadFromFirebase() {
             return fetchAllData().then((data) => {
                 batches = data.batches || [];
@@ -1969,7 +1959,7 @@
             }
             document.getElementById('batchActualAmount').value = '';
             document.getElementById('batchActualDate').value = formatDate(new Date());
-            document.getElementById('batchActualNote').value = '';
+            document.getElementById('batchActualNote').value = ''; // 清空备注
             document.getElementById('modalBatchActual').classList.add('show');
         }
 
@@ -2195,7 +2185,6 @@
                     batchCategories = batchCategories.filter(c => c !== cat);
                     pushDataToFirebase()
                         .then(() => {
-                            // 删除后强制重新从 Firebase 加载数据，确保彻底更新
                             return reloadFromFirebase();
                         })
                         .then(() => {
