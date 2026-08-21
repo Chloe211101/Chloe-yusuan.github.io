@@ -612,6 +612,13 @@
             border-radius: 4px;
             border: 1px solid #A7F3D0;
         }
+        /* 新增：实际支出明细中备注列 */
+        .note-cell {
+            font-size: 13px;
+            color: var(--text-secondary);
+            max-width: 150px;
+            word-break: break-word;
+        }
     </style>
 </head>
 <body>
@@ -725,6 +732,7 @@
         </div>
     </div>
 
+    <!-- 录入批次实际支出（增加备注字段） -->
     <div class="modal-overlay" id="modalBatchActual">
         <div class="modal-content">
             <button class="modal-close" id="closeBatchActualModal">✕</button>
@@ -743,6 +751,10 @@
                 <div class="form-group">
                     <label>日期 *</label>
                     <input type="date" id="batchActualDate" required />
+                </div>
+                <div class="form-group">
+                    <label>备注（选填）</label>
+                    <input type="text" id="batchActualNote" placeholder="如：第一次采购、补货等" maxlength="50" />
                 </div>
                 <button type="submit" class="btn btn-success" style="width:100%; justify-content:center;">保存支出</button>
             </form>
@@ -1076,11 +1088,11 @@
             ]);
             rows.push([]);
             rows.push(['实际支出明细']);
-            rows.push(['日期', '类别', '金额']);
+            rows.push(['日期', '类别', '金额', '备注']);
             if (batch.actuals.length > 0) {
-                batch.actuals.forEach(a => rows.push([a.date, a.category, a.amount.toFixed(2)]));
+                batch.actuals.forEach(a => rows.push([a.date, a.category, a.amount.toFixed(2), a.note || '']));
             } else {
-                rows.push(['', '无实际支出', '']);
+                rows.push(['', '无实际支出', '', '']);
             }
             const csvContent = rows.map(row => row.join(',')).join('\n');
             downloadCSV(csvContent, `批次_${batch.name}_预算使用情况.csv`);
@@ -1112,6 +1124,15 @@
                 rows.push([batch.name + ' (合计)', '', totalBudget.toFixed(2), totalActual.toFixed(2), totalDiff.toFixed(2),
                     totalDiffPercent.toFixed(1), totalCompletePercent.toFixed(1)
                 ]);
+                rows.push([]);
+                // 导出该批次的所有支出明细（含备注）
+                rows.push([batch.name + ' 支出明细']);
+                rows.push(['日期', '类别', '金额', '备注']);
+                if (batch.actuals.length > 0) {
+                    batch.actuals.forEach(a => rows.push([a.date, a.category, a.amount.toFixed(2), a.note || '']));
+                } else {
+                    rows.push(['', '无实际支出', '', '']);
+                }
                 rows.push([]);
             });
             const csvContent = rows.map(row => row.join(',')).join('\n');
@@ -1152,11 +1173,11 @@
             ]);
             rows.push([]);
             rows.push(['实际支出明细']);
-            rows.push(['日期', '类别', '金额']);
+            rows.push(['日期', '类别', '金额', '备注']);
             if (monthly.actuals.length > 0) {
-                monthly.actuals.forEach(a => rows.push([a.date, a.category, a.amount.toFixed(2)]));
+                monthly.actuals.forEach(a => rows.push([a.date, a.category, a.amount.toFixed(2), a.note || '']));
             } else {
-                rows.push(['', '无实际支出', '']);
+                rows.push(['', '无实际支出', '', '']);
             }
             const csvContent = rows.map(row => row.join(',')).join('\n');
             downloadCSV(csvContent, `月度_${month}_支出明细.csv`);
@@ -1195,6 +1216,14 @@
                 rows.push([monthly.month + ' (合计)', '', totalBudget.toFixed(2), totalActual.toFixed(2), totalDiff
                     .toFixed(2), totalDiffPercent.toFixed(1), totalCompletePercent.toFixed(1)
                 ]);
+                rows.push([]);
+                rows.push([monthly.month + ' 支出明细']);
+                rows.push(['日期', '类别', '金额', '备注']);
+                if (monthly.actuals.length > 0) {
+                    monthly.actuals.forEach(a => rows.push([a.date, a.category, a.amount.toFixed(2), a.note || '']));
+                } else {
+                    rows.push(['', '无实际支出', '', '']);
+                }
                 rows.push([]);
             });
             const csvContent = rows.map(row => row.join(',')).join('\n');
@@ -1323,14 +1352,20 @@
             detailHtml +=
                 `<tr style="font-weight:700;background:var(--bg);"><td>合计</td><td>${formatCurrency(totalBudget)}</td><td>${formatCurrency(totalActual)}</td><td style="color:${totalColor};">${totalDiff >= 0 ? '+' : ''}${formatCurrency(totalDiff)}</td><td>${totalBudget > 0 ? totalPercent.toFixed(1) : '-'}%</td></tr>`;
             detailHtml += `</tbody></table></div>`;
-            if (batch.actuals.length > 0) {
-                detailHtml += `<div style="margin-top:16px;"><strong>📋 实际支出明细</strong></div><div class="table-wrap"><table><thead><tr><th>类别</th><th>金额</th><th>日期</th></tr></thead><tbody>`;
-                batch.actuals.forEach(a => { detailHtml +=
-                        `<tr><td>${a.category}</td><td>${formatCurrency(a.amount)}</td><td>${a.date}</td></tr>`; });
+
+            // 显示该批次所有实际支出明细（含备注），按日期排序
+            if (batch.actuals && batch.actuals.length > 0) {
+                detailHtml += `<div style="margin-top:16px;"><strong>📋 实际支出明细</strong></div><div class="table-wrap"><table><thead><tr><th>日期</th><th>类别</th><th>金额</th><th>备注</th></tr></thead><tbody>`;
+                const sortedActuals = [...batch.actuals].sort((a, b) => a.date.localeCompare(b.date));
+                sortedActuals.forEach(a => {
+                    detailHtml +=
+                        `<tr><td>${a.date}</td><td>${a.category}</td><td>${formatCurrency(a.amount)}</td><td class="note-cell">${a.note || ''}</td></tr>`;
+                });
                 detailHtml += `</tbody></table></div>`;
             } else {
                 detailHtml += `<div class="text-muted text-small" style="margin-top:12px;">暂无实际支出记录</div>`;
             }
+
             const modal = document.createElement('div');
             modal.className = 'modal-overlay show';
             modal.innerHTML = `
@@ -1468,9 +1503,12 @@
                 `<tr style="font-weight:700;background:var(--bg);"><td>合计</td><td>${formatCurrency(totalBudget)}</td><td>${formatCurrency(totalActual)}</td><td style="color:${totalColor};">${totalDiff >= 0 ? '+' : ''}${formatCurrency(totalDiff)}</td><td>${totalBudget > 0 ? totalPercent.toFixed(1) : '-'}%</td></tr>`;
             detailHtml += `</tbody></table></div>`;
             if (monthly.actuals.length > 0) {
-                detailHtml += `<div style="margin-top:16px;"><strong>📋 实际支出明细</strong></div><div class="table-wrap"><table><thead><tr><th>类别</th><th>金额</th><th>日期</th></tr></thead><tbody>`;
-                monthly.actuals.forEach(a => { detailHtml +=
-                        `<tr><td>${a.category}</td><td>${formatCurrency(a.amount)}</td><td>${a.date}</td></tr>`; });
+                detailHtml += `<div style="margin-top:16px;"><strong>📋 实际支出明细</strong></div><div class="table-wrap"><table><thead><tr><th>日期</th><th>类别</th><th>金额</th><th>备注</th></tr></thead><tbody>`;
+                const sortedActuals = [...monthly.actuals].sort((a, b) => a.date.localeCompare(b.date));
+                sortedActuals.forEach(a => {
+                    detailHtml +=
+                        `<tr><td>${a.date}</td><td>${a.category}</td><td>${formatCurrency(a.amount)}</td><td>${a.note || ''}</td></tr>`;
+                });
                 detailHtml += `</tbody></table></div>`;
             } else {
                 detailHtml += `<div class="text-muted text-small" style="margin-top:12px;">暂无实际支出记录</div>`;
@@ -1660,11 +1698,11 @@
                     { category: '配件', budget: 2200 }
                 ],
                 actuals: [
-                    { category: '不锈钢板', amount: 11000, date: '2025-08-05' },
-                    { category: '酸洗', amount: 2800, date: '2025-08-07' },
-                    { category: '镀色', amount: 4200, date: '2025-08-10' },
-                    { category: '外购成品', amount: 6500, date: '2025-08-12' },
-                    { category: '配件', amount: 2100, date: '2025-08-14' }
+                    { category: '不锈钢板', amount: 11000, date: '2025-08-05', note: '第一批采购' },
+                    { category: '酸洗', amount: 2800, date: '2025-08-07', note: '酸洗加工费' },
+                    { category: '镀色', amount: 4200, date: '2025-08-10', note: '镀色费用' },
+                    { category: '外购成品', amount: 6500, date: '2025-08-12', note: '外购配件' },
+                    { category: '配件', amount: 2100, date: '2025-08-14', note: '补货' }
                 ]
             }, {
                 id: 'sample2',
@@ -1681,10 +1719,10 @@
                     { category: '配件', budget: 1500 }
                 ],
                 actuals: [
-                    { category: '不锈钢板', amount: 8500, date: '2025-08-08' },
-                    { category: '不锈钢管', amount: 5500, date: '2025-08-09' },
-                    { category: '激光', amount: 1900, date: '2025-08-11' },
-                    { category: '配件', amount: 1600, date: '2025-08-13' }
+                    { category: '不锈钢板', amount: 8500, date: '2025-08-08', note: '第一次' },
+                    { category: '不锈钢管', amount: 5500, date: '2025-08-09', note: '第二次' },
+                    { category: '激光', amount: 1900, date: '2025-08-11', note: '激光切割' },
+                    { category: '配件', amount: 1600, date: '2025-08-13', note: '追加' }
                 ]
             }];
         }
@@ -1701,72 +1739,29 @@
                     cat === '水电' ? 1500 : 0
             }));
             const actuals = [
-                { category: '办公费用', amount: 2800, date: '2025-08-03' },
-                { category: '房租', amount: 8000, date: '2025-08-05' },
-                { category: '社保', amount: 6200, date: '2025-08-15' },
-                { category: '宁波办公室工资', amount: 51000, date: '2025-08-20' }
+                { category: '办公费用', amount: 2800, date: '2025-08-03', note: '办公用品' },
+                { category: '房租', amount: 8000, date: '2025-08-05', note: '8月房租' },
+                { category: '社保', amount: 6200, date: '2025-08-15', note: '社保缴纳' },
+                { category: '宁波办公室工资', amount: 51000, date: '2025-08-20', note: '8月工资' }
             ];
             return [{ month: '2025-08', budgetItems, actuals }];
         }
 
-        function loadInitialData() {
-            const cache = loadLocalCache();
-            if (cache) {
-                batches = cache.batches || [];
-                monthlyBudgets = cache.monthlyBudgets || [];
-                batchCategories = cache.batchCategories || [];
-                monthlyCategories = cache.monthlyCategories || [];
-                renderAll();
-                updateSyncStatus(false);
-                console.log('📦 从本地缓存加载数据');
-            }
-
-            if (!firebaseInitialized || !db) {
-                showToast('⚠️ Firebase 未连接，请检查配置', 'error');
-                return;
-            }
-
+        // ================================================================
+        //  强制从 Firebase 重新加载数据（用于删除类别后刷新）
+        // ================================================================
+        function reloadFromFirebase() {
             fetchAllData().then((data) => {
-                if (data.batches.length || data.monthlyBudgets.length || data.batchCategories.length || data
-                    .monthlyCategories.length) {
-                    batches = data.batches;
-                    monthlyBudgets = data.monthlyBudgets;
-                    batchCategories = data.batchCategories || [];
-                    monthlyCategories = data.monthlyCategories || [];
-                    saveLocalCache(data);
-                    renderAll();
-                    updateSyncStatus(true);
-                    console.log('☁️ 从 Firebase 加载数据');
-                } else {
-                    if (!cache) {
-                        batchCategories = [...DEFAULT_BATCH_CATEGORIES];
-                        monthlyCategories = [...DEFAULT_MONTHLY_CATEGORIES];
-                        batches = getSampleBatches();
-                        monthlyBudgets = getSampleMonthly();
-                        renderAll();
-                        pushDataToFirebase().catch(() => {});
-                        console.log('📝 初始化默认数据');
-                    }
-                }
-                startListening();
-            }).catch((err) => {
-                console.error('加载数据失败:', err);
-                if (cache) {
-                    batches = cache.batches || [];
-                    monthlyBudgets = cache.monthlyBudgets || [];
-                    batchCategories = cache.batchCategories || [];
-                    monthlyCategories = cache.monthlyCategories || [];
-                    renderAll();
-                    updateSyncStatus(false);
-                    showToast('⚠️ 使用本地缓存数据', 'warning');
-                } else {
-                    batchCategories = [...DEFAULT_BATCH_CATEGORIES];
-                    monthlyCategories = [...DEFAULT_MONTHLY_CATEGORIES];
-                    batches = getSampleBatches();
-                    monthlyBudgets = getSampleMonthly();
-                    renderAll();
-                    showToast('⚠️ 使用示例数据', 'warning');
-                }
+                batches = data.batches || [];
+                monthlyBudgets = data.monthlyBudgets || [];
+                batchCategories = data.batchCategories || [];
+                monthlyCategories = data.monthlyCategories || [];
+                saveLocalCache(data);
+                renderAll();
+                updateSyncStatus(true);
+                console.log('🔄 已从 Firebase 重新加载数据');
+            }).catch(err => {
+                console.error('重新加载失败:', err);
             });
         }
 
@@ -1888,7 +1883,7 @@
                 .catch(() => showToast('更新失败', 'error'));
         });
 
-        // 录入批次实际支出
+        // 录入批次实际支出（含备注）
         function openBatchActualModal(batchId) {
             const batch = batches.find(b => b.id === batchId);
             if (!batch) return;
@@ -1915,6 +1910,7 @@
             }
             document.getElementById('batchActualAmount').value = '';
             document.getElementById('batchActualDate').value = formatDate(new Date());
+            document.getElementById('batchActualNote').value = '';
             document.getElementById('modalBatchActual').classList.add('show');
         }
 
@@ -1928,12 +1924,13 @@
             const category = document.getElementById('batchActualCategory').value;
             const amount = parseFloat(document.getElementById('batchActualAmount').value);
             const date = document.getElementById('batchActualDate').value;
+            const note = document.getElementById('batchActualNote').value.trim();
             if (!amount || amount <= 0) { showToast('请输入有效金额', 'error'); return; }
             if (!date) { showToast('请选择日期', 'error'); return; }
             const batch = batches.find(b => b.id === batchId);
             if (!batch) { showToast('批次不存在', 'error'); return; }
             if (!batch.actuals) batch.actuals = [];
-            batch.actuals.push({ category, amount, date });
+            batch.actuals.push({ category, amount, date, note });
             pushDataToFirebase()
                 .then(() => {
                     closeBatchActualModal();
@@ -2042,7 +2039,7 @@
                 .catch(() => showToast('更新失败', 'error'));
         });
 
-        // 录入月度实际支出
+        // 录入月度实际支出（无备注，保持简单）
         function openMonthlyActualModal(month) {
             const monthly = monthlyBudgets.find(m => m.month === month);
             if (!monthly) return;
@@ -2139,8 +2136,9 @@
                     batchCategories = batchCategories.filter(c => c !== cat);
                     pushDataToFirebase()
                         .then(() => {
-                            renderBatchCategoryManager();
-                            renderAll();
+                            // 删除后强制重新从 Firebase 加载数据，确保彻底更新
+                            reloadFromFirebase();
+                            renderBatchCategoryManager(); // 刷新列表
                             showToast(`已删除类别「${cat}」`, 'success');
                         })
                         .catch((err) => {
@@ -2215,6 +2213,7 @@
                     monthlyCategories = monthlyCategories.filter(c => c !== cat);
                     pushDataToFirebase()
                         .then(() => {
+                            reloadFromFirebase();
                             renderMonthlyCategoryManager();
                             showToast(`已删除类别「${cat}」`, 'success');
                         })
