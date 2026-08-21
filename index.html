@@ -729,7 +729,7 @@
         </div>
     </div>
 
-    <!-- ===== 批次实际支出模态框（含备注） ===== -->
+    <!-- 批次实际支出模态框（含备注） -->
     <div class="modal-overlay" id="modalBatchActual">
         <div class="modal-content">
             <button class="modal-close" id="closeBatchActualModal">✕</button>
@@ -749,7 +749,6 @@
                     <label>日期 *</label>
                     <input type="date" id="batchActualDate" required />
                 </div>
-                <!-- 备注输入框 -->
                 <div class="form-group">
                     <label>备注（选填）</label>
                     <input type="text" id="batchActualNote" placeholder="如：第一次采购、补货等" maxlength="50" />
@@ -796,6 +795,7 @@
         </div>
     </div>
 
+    <!-- ===== 月度实际支出模态框（已添加备注） ===== -->
     <div class="modal-overlay" id="modalMonthlyActual">
         <div class="modal-content">
             <button class="modal-close" id="closeMonthlyActualModal">✕</button>
@@ -814,6 +814,11 @@
                 <div class="form-group">
                     <label>日期 *</label>
                     <input type="date" id="monthlyActualDate" required />
+                </div>
+                <!-- 新增备注输入框 -->
+                <div class="form-group">
+                    <label>备注（选填）</label>
+                    <input type="text" id="monthlyActualNote" placeholder="如：报销、办公用品等" maxlength="50" />
                 </div>
                 <button type="submit" class="btn btn-success" style="width:100%; justify-content:center;">保存支出</button>
             </form>
@@ -2088,7 +2093,7 @@
                 .catch(() => showToast('更新失败', 'error'));
         });
 
-        // 录入月度实际支出
+        // ===== 录入月度实际支出（含备注） =====
         function openMonthlyActualModal(month) {
             const monthly = monthlyBudgets.find(m => m.month === month);
             if (!monthly) return;
@@ -2115,6 +2120,7 @@
             }
             document.getElementById('monthlyActualAmount').value = '';
             document.getElementById('monthlyActualDate').value = formatDate(new Date());
+            document.getElementById('monthlyActualNote').value = '';  // 清空备注
             document.getElementById('modalMonthlyActual').classList.add('show');
         }
 
@@ -2128,18 +2134,23 @@
             const category = document.getElementById('monthlyActualCategory').value;
             const amount = parseFloat(document.getElementById('monthlyActualAmount').value);
             const date = document.getElementById('monthlyActualDate').value;
+            const note = document.getElementById('monthlyActualNote').value.trim();  // 读取备注
             if (!amount || amount <= 0) { showToast('请输入有效金额', 'error'); return; }
             if (!date) { showToast('请选择日期', 'error'); return; }
             const monthly = monthlyBudgets.find(m => m.month === month);
             if (!monthly) { showToast('月度预算不存在', 'error'); return; }
-            monthly.actuals.push({ category, amount, date });
+            if (!monthly.actuals) monthly.actuals = []; // 确保数组存在
+            monthly.actuals.push({ category, amount, date, note });
             pushDataToFirebase()
                 .then(() => {
                     closeMonthlyActualModal();
                     renderAll();
                     showToast(`支出 ${formatCurrency(amount)} 已录入`, 'success');
                 })
-                .catch(() => showToast('录入失败', 'error'));
+                .catch((err) => {
+                    console.error('保存失败:', err);
+                    showToast('录入失败，请检查网络', 'error');
+                });
         });
 
         // ================================================================
