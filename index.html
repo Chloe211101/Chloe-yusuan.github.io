@@ -9,6 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js">
     </script>
     <style>
+        /* ====== 样式 ====== */
         :root {
             --primary: #1E3A8A;
             --primary-light: #3B82F6;
@@ -616,7 +617,6 @@
             max-width: 150px;
             word-break: break-word;
         }
-        /* 操作按钮组 */
         .action-btns {
             display: flex;
             gap: 4px;
@@ -701,7 +701,7 @@
 
     <div class="toast" id="toast"></div>
 
-    <!-- ====== 所有模态框 ====== -->
+    <!-- ====== 模态框 ====== -->
     <!-- 新建批次 -->
     <div class="modal-overlay" id="modalBatch">
         <div class="modal-content">
@@ -741,7 +741,7 @@
         </div>
     </div>
 
-    <!-- 批次实际支出（添加/编辑共用） -->
+    <!-- 批次实际支出（添加/编辑） -->
     <div class="modal-overlay" id="modalBatchActual">
         <div class="modal-content">
             <button class="modal-close" id="closeBatchActualModal">✕</button>
@@ -749,7 +749,7 @@
             <p style="margin-bottom:12px; color:var(--text-secondary);" id="batchActualTitle">批次：</p>
             <form id="batchActualForm">
                 <input type="hidden" id="batchActualId" />
-                <input type="hidden" id="batchActualEditId" /> <!-- 编辑时存放支出ID -->
+                <input type="hidden" id="batchActualEditId" />
                 <div class="form-group">
                     <label>费用类别 *</label>
                     <select id="batchActualCategory" required></select>
@@ -810,7 +810,7 @@
         </div>
     </div>
 
-    <!-- 月度实际支出（添加/编辑共用） -->
+    <!-- 月度实际支出（添加/编辑） -->
     <div class="modal-overlay" id="modalMonthlyActual">
         <div class="modal-content">
             <button class="modal-close" id="closeMonthlyActualModal">✕</button>
@@ -878,7 +878,7 @@
     <!-- ============================================================ -->
     <script>
         // ================================================================
-        //  🔥 Firebase 配置（已填入您的信息）
+        //  🔥 Firebase 配置
         // ================================================================
         const FIREBASE_CONFIG = {
             apiKey: "AIzaSyAWTKeDGV1BT0LaWHyYJKMBV7PZGImh0vU",
@@ -890,18 +890,29 @@
             appId: "1:468543796650:web:0306b54854649c6b6d27d3"
         };
 
-        // ================================================================
-        //  初始化 Firebase
-        // ================================================================
-        let db = null;
-        let firebaseInitialized = false;
-        let currentProjectId = 'default';
+        let db, firebaseInitialized = false,
+            currentProjectId = 'default';
+        let batches = [],
+            monthlyBudgets = [],
+            batchCategories = [],
+            monthlyCategories = [],
+            unlistenFn = null,
+            pushPending = false;
 
+        const DEFAULT_BATCH_CATEGORIES = ['不锈钢板', '不锈钢管', '玻璃', '酸洗', '镀色', '激光', '外购成品', '包装', '配件'];
+        const DEFAULT_MONTHLY_CATEGORIES = [
+            '办公费用', '报销', '房租', '水电', '社保',
+            '宁波办公室工资', '其他管理费用', '货代费', '佣金', '广告费',
+            '展会费用', '其他销售费用', '宣城办公费', '宣城工资', '低值易耗品',
+            '员工餐', '氩气', '维修保养', '缠绕膜', '玻璃珠', '快递费'
+        ];
+
+        // ================================================================
+        //  Firebase 初始化 & 数据层
+        // ================================================================
         function initFirebase() {
             try {
-                if (firebase.apps.length === 0) {
-                    firebase.initializeApp(FIREBASE_CONFIG);
-                }
+                if (firebase.apps.length === 0) firebase.initializeApp(FIREBASE_CONFIG);
                 db = firebase.database();
                 firebaseInitialized = true;
                 updateSyncStatus(true);
@@ -915,9 +926,6 @@
             }
         }
 
-        // ================================================================
-        //  数据层
-        // ================================================================
         function getRootRef() {
             const params = new URLSearchParams(window.location.search);
             currentProjectId = params.get('project') || 'default';
@@ -926,7 +934,7 @@
 
         function fetchAllData() {
             return new Promise((resolve, reject) => {
-                if (!firebaseInitialized || !db) reject(new Error('Firebase not ready'));
+                if (!firebaseInitialized || !db) reject('Firebase not ready');
                 getRootRef().once('value', snap => {
                     const val = snap.val() || {};
                     resolve({
@@ -941,7 +949,7 @@
 
         function saveAllData(data) {
             return new Promise((resolve, reject) => {
-                if (!firebaseInitialized || !db) reject(new Error('Firebase not ready'));
+                if (!firebaseInitialized || !db) reject('Firebase not ready');
                 getRootRef().set(data, err => err ? reject(err) : resolve());
             });
         }
@@ -964,7 +972,7 @@
         }
 
         // ================================================================
-        //  本地缓存
+        //  缓存工具
         // ================================================================
         function loadLocalCache() {
             try {
@@ -976,49 +984,23 @@
         function saveLocalCache(data) {
             try {
                 localStorage.setItem('prod_cache_' + currentProjectId, JSON.stringify(data));
-            } catch (e) { /* ignore */ }
+            } catch (e) {}
         }
 
         // ================================================================
-        //  全局状态
-        // ================================================================
-        let batches = [];
-        let monthlyBudgets = [];
-        let batchCategories = [];
-        let monthlyCategories = [];
-        let unlistenFn = null;
-        let pushPending = false;
-
-        const DEFAULT_BATCH_CATEGORIES = ['不锈钢板', '不锈钢管', '玻璃', '酸洗', '镀色', '激光', '外购成品', '包装', '配件'];
-        const DEFAULT_MONTHLY_CATEGORIES = [
-            '办公费用', '报销', '房租', '水电', '社保',
-            '宁波办公室工资', '其他管理费用', '货代费', '佣金', '广告费',
-            '展会费用', '其他销售费用', '宣城办公费', '宣城工资', '低值易耗品',
-            '员工餐', '氩气', '维修保养', '缠绕膜', '玻璃珠', '快递费'
-        ];
-
-        // ================================================================
-        //  工具函数（已修复缺失字段问题）
+        //  工具函数
         // ================================================================
         function generateId() { return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6); }
 
         function formatCurrency(v) { return '¥' + Number(v).toFixed(2); }
 
-        function getBatchTotalBudget(b) {
-            return (b.budgetItems || []).reduce((s, i) => s + i.budget, 0);
-        }
+        function getBatchTotalBudget(b) { return (b.budgetItems || []).reduce((s, i) => s + i.budget, 0); }
 
-        function getBatchTotalActual(b) {
-            return (b.actuals || []).reduce((s, a) => s + a.amount, 0);
-        }
+        function getBatchTotalActual(b) { return (b.actuals || []).reduce((s, a) => s + a.amount, 0); }
 
-        function getMonthlyTotalBudget(m) {
-            return (m.budgetItems || []).reduce((s, i) => s + i.budget, 0);
-        }
+        function getMonthlyTotalBudget(m) { return (m.budgetItems || []).reduce((s, i) => s + i.budget, 0); }
 
-        function getMonthlyTotalActual(m) {
-            return (m.actuals || []).reduce((s, a) => s + a.amount, 0);
-        }
+        function getMonthlyTotalActual(m) { return (m.actuals || []).reduce((s, a) => s + a.amount, 0); }
 
         function getCategoryBudget(batch, cat) {
             const item = (batch.budgetItems || []).find(i => i.category === cat);
@@ -1030,12 +1012,12 @@
         }
 
         function getBatchAlert(batch) {
-            const totalBudget = getBatchTotalBudget(batch);
-            const totalActual = getBatchTotalActual(batch);
+            const totalBudget = getBatchTotalBudget(batch),
+                totalActual = getBatchTotalActual(batch);
             if (totalBudget === 0) return { level: 'none', percent: 0, diff: 0, diffPercent: 0 };
-            const percent = (totalActual / totalBudget) * 100;
-            const diff = totalActual - totalBudget;
-            const diffPercent = (diff / totalBudget) * 100;
+            const percent = (totalActual / totalBudget) * 100,
+                diff = totalActual - totalBudget,
+                diffPercent = (diff / totalBudget) * 100;
             let level = 'normal';
             if (percent >= 100) level = 'danger';
             else if (percent >= 90) level = 'warning';
@@ -1043,12 +1025,12 @@
         }
 
         function getMonthlyAlert(monthly) {
-            const totalBudget = getMonthlyTotalBudget(monthly);
-            const totalActual = getMonthlyTotalActual(monthly);
+            const totalBudget = getMonthlyTotalBudget(monthly),
+                totalActual = getMonthlyTotalActual(monthly);
             if (totalBudget === 0) return { level: 'none', percent: 0, diff: 0, diffPercent: 0 };
-            const percent = (totalActual / totalBudget) * 100;
-            const diff = totalActual - totalBudget;
-            const diffPercent = (diff / totalBudget) * 100;
+            const percent = (totalActual / totalBudget) * 100,
+                diff = totalActual - totalBudget,
+                diffPercent = (diff / totalBudget) * 100;
             let level = 'normal';
             if (percent >= 100) level = 'danger';
             else if (percent >= 90) level = 'warning';
@@ -1057,26 +1039,22 @@
 
         function formatDate(date) {
             const d = new Date(date);
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${y}-${m}-${day}`;
+            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
         }
 
         // ================================================================
-        //  CSV 导出（已修复，所有数组都做了防御）
+        //  CSV 导出（已修复）
         // ================================================================
         function downloadCSV(csvString, filename) {
             const BOM = '\uFEFF';
             const blob = new Blob([BOM + csvString], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.href = url;
-            link.setAttribute('download', filename);
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            URL.revokeObjectURL(url);
+            URL.revokeObjectURL(link.href);
         }
 
         function downloadBatchCSV(batchId) {
@@ -1096,11 +1074,11 @@
                     completePercent.toFixed(1)
                 ]);
             });
-            const totalBudget = getBatchTotalBudget(batch);
-            const totalActual = getBatchTotalActual(batch);
-            const totalDiff = totalActual - totalBudget;
-            const totalDiffPercent = totalBudget > 0 ? (totalDiff / totalBudget) * 100 : 0;
-            const totalCompletePercent = totalBudget > 0 ? (totalActual / totalBudget) * 100 : 0;
+            const totalBudget = getBatchTotalBudget(batch),
+                totalActual = getBatchTotalActual(batch),
+                totalDiff = totalActual - totalBudget,
+                totalDiffPercent = totalBudget > 0 ? (totalDiff / totalBudget) * 100 : 0,
+                totalCompletePercent = totalBudget > 0 ? (totalActual / totalBudget) * 100 : 0;
             rows.push([batch.name + ' (合计)', '', totalBudget.toFixed(2), totalActual.toFixed(2), totalDiff.toFixed(2),
                 totalDiffPercent.toFixed(1), totalCompletePercent.toFixed(1)
             ]);
@@ -1134,11 +1112,11 @@
                         completePercent.toFixed(1)
                     ]);
                 });
-                const totalBudget = getBatchTotalBudget(batch);
-                const totalActual = getBatchTotalActual(batch);
-                const totalDiff = totalActual - totalBudget;
-                const totalDiffPercent = totalBudget > 0 ? (totalDiff / totalBudget) * 100 : 0;
-                const totalCompletePercent = totalBudget > 0 ? (totalActual / totalBudget) * 100 : 0;
+                const totalBudget = getBatchTotalBudget(batch),
+                    totalActual = getBatchTotalActual(batch),
+                    totalDiff = totalActual - totalBudget,
+                    totalDiffPercent = totalBudget > 0 ? (totalDiff / totalBudget) * 100 : 0,
+                    totalCompletePercent = totalBudget > 0 ? (totalActual / totalBudget) * 100 : 0;
                 rows.push([batch.name + ' (合计)', '', totalBudget.toFixed(2), totalActual.toFixed(2), totalDiff.toFixed(2),
                     totalDiffPercent.toFixed(1), totalCompletePercent.toFixed(1)
                 ]);
@@ -1180,11 +1158,11 @@
                     completePercent.toFixed(1)
                 ]);
             });
-            const totalBudget = getMonthlyTotalBudget(monthly);
-            const totalActual = getMonthlyTotalActual(monthly);
-            const totalDiff = totalActual - totalBudget;
-            const totalDiffPercent = totalBudget > 0 ? (totalDiff / totalBudget) * 100 : 0;
-            const totalCompletePercent = totalBudget > 0 ? (totalActual / totalBudget) * 100 : 0;
+            const totalBudget = getMonthlyTotalBudget(monthly),
+                totalActual = getMonthlyTotalActual(monthly),
+                totalDiff = totalActual - totalBudget,
+                totalDiffPercent = totalBudget > 0 ? (totalDiff / totalBudget) * 100 : 0,
+                totalCompletePercent = totalBudget > 0 ? (totalActual / totalBudget) * 100 : 0;
             rows.push([month + ' (合计)', '', totalBudget.toFixed(2), totalActual.toFixed(2), totalDiff.toFixed(2),
                 totalDiffPercent.toFixed(1), totalCompletePercent.toFixed(1)
             ]);
@@ -1224,11 +1202,11 @@
                         completePercent.toFixed(1)
                     ]);
                 });
-                const totalBudget = getMonthlyTotalBudget(monthly);
-                const totalActual = getMonthlyTotalActual(monthly);
-                const totalDiff = totalActual - totalBudget;
-                const totalDiffPercent = totalBudget > 0 ? (totalDiff / totalBudget) * 100 : 0;
-                const totalCompletePercent = totalBudget > 0 ? (totalActual / totalBudget) * 100 : 0;
+                const totalBudget = getMonthlyTotalBudget(monthly),
+                    totalActual = getMonthlyTotalActual(monthly),
+                    totalDiff = totalActual - totalBudget,
+                    totalDiffPercent = totalBudget > 0 ? (totalDiff / totalBudget) * 100 : 0,
+                    totalCompletePercent = totalBudget > 0 ? (totalActual / totalBudget) * 100 : 0;
                 rows.push([monthly.month + ' (合计)', '', totalBudget.toFixed(2), totalActual.toFixed(2), totalDiff.toFixed(2),
                     totalDiffPercent.toFixed(1), totalCompletePercent.toFixed(1)
                 ]);
@@ -1248,7 +1226,7 @@
         }
 
         // ================================================================
-        //  渲染函数（核心）
+        //  渲染核心
         // ================================================================
         function renderHeaderDate() {
             const now = new Date();
@@ -1271,9 +1249,9 @@
 
             let html = '';
             filtered.forEach(batch => {
-                const totalBudget = getBatchTotalBudget(batch);
-                const totalActual = getBatchTotalActual(batch);
-                const alert = getBatchAlert(batch);
+                const totalBudget = getBatchTotalBudget(batch),
+                    totalActual = getBatchTotalActual(batch),
+                    alert = getBatchAlert(batch);
                 const statusClass = alert.level === 'danger' ? 'tag-danger' :
                     alert.level === 'warning' ? 'tag-warning' : 'tag-success';
                 const statusText = alert.level === 'danger' ? '⚠️ 超支' :
@@ -1332,7 +1310,8 @@
                     if (confirm('确定删除该批次及其所有数据吗？')) {
                         batches = batches.filter(b => b.id !== btn.dataset.id);
                         pushDataToFirebase()
-                            .then(() => showToast('批次已删除', 'success'))
+                            .then(() => { showToast('批次已删除', 'success');
+                                reloadFromFirebase(); })
                             .catch(() => showToast('删除失败', 'error'));
                     }
                 });
@@ -1360,10 +1339,10 @@
                 detailHtml +=
                     `<tr><td>${cat}</td><td>${formatCurrency(budget)}</td><td>${formatCurrency(actual)}</td><td style="color:${diffColor};">${diff >= 0 ? '+' : ''}${formatCurrency(diff)}</td><td>${budget > 0 ? percent.toFixed(1) : '-'}%</td></tr>`;
             });
-            const totalBudget = getBatchTotalBudget(batch);
-            const totalActual = getBatchTotalActual(batch);
-            const totalDiff = totalActual - totalBudget;
-            const totalPercent = totalBudget > 0 ? (totalActual / totalBudget) * 100 : 0;
+            const totalBudget = getBatchTotalBudget(batch),
+                totalActual = getBatchTotalActual(batch),
+                totalDiff = totalActual - totalBudget,
+                totalPercent = totalBudget > 0 ? (totalActual / totalBudget) * 100 : 0;
             const totalColor = totalDiff > 0 ? 'var(--danger)' : (totalDiff < 0 ? 'var(--success)' :
             'var(--text-secondary)');
             detailHtml +=
@@ -1411,7 +1390,6 @@
             `;
             document.body.appendChild(modal);
 
-            // 事件绑定
             modal.querySelector('#downloadSingleBatchFromDetail').addEventListener('click', function() {
                 downloadBatchCSV(this.dataset.id);
             });
@@ -1426,7 +1404,6 @@
                 openBatchActualModal(id);
             });
 
-            // 编辑支出
             modal.querySelectorAll('.edit-batch-actual').forEach(btn => {
                 btn.addEventListener('click', function(e) {
                     e.stopPropagation();
@@ -1436,7 +1413,6 @@
                     openEditBatchActual(batchId, actualId);
                 });
             });
-            // 删除支出
             modal.querySelectorAll('.delete-batch-actual').forEach(btn => {
                 btn.addEventListener('click', function(e) {
                     e.stopPropagation();
@@ -1473,10 +1449,10 @@
                 detailHtml +=
                     `<tr><td>${cat}</td><td>${formatCurrency(budget)}</td><td>${formatCurrency(actual)}</td><td style="color:${diffColor};">${diff >= 0 ? '+' : ''}${formatCurrency(diff)}</td><td>${budget > 0 ? percent.toFixed(1) : '-'}%</td></tr>`;
             });
-            const totalBudget = getMonthlyTotalBudget(monthly);
-            const totalActual = getMonthlyTotalActual(monthly);
-            const totalDiff = totalActual - totalBudget;
-            const totalPercent = totalBudget > 0 ? (totalActual / totalBudget) * 100 : 0;
+            const totalBudget = getMonthlyTotalBudget(monthly),
+                totalActual = getMonthlyTotalActual(monthly),
+                totalDiff = totalActual - totalBudget,
+                totalPercent = totalBudget > 0 ? (totalActual / totalBudget) * 100 : 0;
             const totalColor = totalDiff > 0 ? 'var(--danger)' : (totalDiff < 0 ? 'var(--success)' :
             'var(--text-secondary)');
             detailHtml +=
@@ -1565,16 +1541,18 @@
         // ---- 编辑批次支出 ----
         function openEditBatchActual(batchId, actualId) {
             const batch = batches.find(b => b.id === batchId);
-            if (!batch) return;
+            if (!batch) { showToast('批次不存在', 'error'); return; }
             const actual = batch.actuals.find(a => a.id === actualId);
-            if (!actual) { showToast('支出记录不存在', 'error'); return; }
-
+            if (!actual) {
+                console.error('未找到支出记录，ID:', actualId, '批次actuals:', batch.actuals);
+                showToast('支出记录不存在，请刷新后重试', 'error');
+                return;
+            }
             document.getElementById('batchActualId').value = batchId;
             document.getElementById('batchActualEditId').value = actualId;
             document.getElementById('batchActualTitle').textContent = `批次：${batch.name}（编辑支出）`;
             document.getElementById('batchActualModalTitle').textContent = '✏️ 编辑支出';
 
-            // 填充数据
             const select = document.getElementById('batchActualCategory');
             select.innerHTML = '';
             const cats = batch.budgetItems.map(item => item.category);
@@ -1605,10 +1583,13 @@
         // ---- 编辑月度支出 ----
         function openEditMonthlyActual(month, actualId) {
             const monthly = monthlyBudgets.find(m => m.month === month);
-            if (!monthly) return;
+            if (!monthly) { showToast('月度预算不存在', 'error'); return; }
             const actual = monthly.actuals.find(a => a.id === actualId);
-            if (!actual) { showToast('支出记录不存在', 'error'); return; }
-
+            if (!actual) {
+                console.error('未找到支出记录，ID:', actualId, '月度actuals:', monthly.actuals);
+                showToast('支出记录不存在，请刷新后重试', 'error');
+                return;
+            }
             document.getElementById('monthlyActualMonth').value = month;
             document.getElementById('monthlyActualEditId').value = actualId;
             document.getElementById('monthlyActualTitle').textContent = `月份：${month}（编辑支出）`;
@@ -1644,23 +1625,46 @@
         // ---- 删除批次支出 ----
         function deleteBatchActual(batchId, actualId) {
             const batch = batches.find(b => b.id === batchId);
-            if (!batch) return;
+            if (!batch) { showToast('批次不存在', 'error'); return; }
+            const before = batch.actuals.length;
             batch.actuals = batch.actuals.filter(a => a.id !== actualId);
-            pushDataToFirebase().then(() => {
-                renderAll();
-                showToast('支出已删除', 'success');
-            }).catch(() => showToast('删除失败', 'error'));
+            if (batch.actuals.length === before) {
+                showToast('支出记录不存在，可能已被删除', 'warning');
+                return;
+            }
+            pushDataToFirebase()
+                .then(() => {
+                    showToast('支出已删除', 'success');
+                    reloadFromFirebase(); // 强制从云端同步
+                })
+                .catch(err => {
+                    console.error('删除失败:', err);
+                    showToast('删除失败，请检查网络', 'error');
+                    // 回滚？由于我们已修改本地，但写入失败，可能需重新加载
+                    reloadFromFirebase();
+                });
         }
 
         // ---- 删除月度支出 ----
         function deleteMonthlyActual(month, actualId) {
             const monthly = monthlyBudgets.find(m => m.month === month);
-            if (!monthly) return;
+            if (!monthly) { showToast('月度预算不存在', 'error'); return; }
+            const before = monthly.actuals.length;
             monthly.actuals = monthly.actuals.filter(a => a.id !== actualId);
-            pushDataToFirebase().then(() => {
-                renderAll();
-                showToast('支出已删除', 'success');
-            }).catch(() => showToast('删除失败', 'error'));
+            if (monthly.actuals.length === before) {
+                showToast('支出记录不存在，可能已被删除', 'warning');
+                return;
+            }
+            pushDataToFirebase()
+                .then(() => {
+                    showToast('支出已删除', 'success');
+                    reloadFromFirebase();
+                })
+                .catch(err => {
+                    console.error('删除失败:', err);
+                    showToast('删除失败，请检查网络', 'error');
+                    reloadFromFirebase();
+                });
         }
 
         // ---- 批次支出提交（新增/编辑） ----
@@ -1678,20 +1682,23 @@
             if (!batch) { showToast('批次不存在', 'error'); return; }
             if (!batch.actuals) batch.actuals = [];
             if (editId) {
-                // 编辑模式
                 const idx = batch.actuals.findIndex(a => a.id === editId);
                 if (idx === -1) { showToast('支出记录不存在', 'error'); return; }
                 batch.actuals[idx] = { id: editId, category, amount, date, note };
             } else {
-                // 新增模式
-                const newId = generateId();
-                batch.actuals.push({ id: newId, category, amount, date, note });
+                batch.actuals.push({ id: generateId(), category, amount, date, note });
             }
-            pushDataToFirebase().then(() => {
-                closeBatchActualModal();
-                renderAll();
-                showToast(editId ? '支出已更新' : `支出 ${formatCurrency(amount)} 已录入`, 'success');
-            }).catch(() => showToast('保存失败', 'error'));
+            pushDataToFirebase()
+                .then(() => {
+                    closeBatchActualModal();
+                    renderAll();
+                    showToast(editId ? '支出已更新' : `支出 ${formatCurrency(amount)} 已录入`, 'success');
+                    reloadFromFirebase(); // 确保数据同步
+                })
+                .catch(err => {
+                    console.error('保存失败:', err);
+                    showToast('保存失败，请检查网络', 'error');
+                });
         });
 
         // ---- 月度支出提交（新增/编辑） ----
@@ -1713,23 +1720,24 @@
                 if (idx === -1) { showToast('支出记录不存在', 'error'); return; }
                 monthly.actuals[idx] = { id: editId, category, amount, date, note };
             } else {
-                const newId = generateId();
-                monthly.actuals.push({ id: newId, category, amount, date, note });
+                monthly.actuals.push({ id: generateId(), category, amount, date, note });
             }
-            pushDataToFirebase().then(() => {
-                closeMonthlyActualModal();
-                renderAll();
-                showToast(editId ? '支出已更新' : `支出 ${formatCurrency(amount)} 已录入`, 'success');
-            }).catch(() => showToast('保存失败', 'error'));
+            pushDataToFirebase()
+                .then(() => {
+                    closeMonthlyActualModal();
+                    renderAll();
+                    showToast(editId ? '支出已更新' : `支出 ${formatCurrency(amount)} 已录入`, 'success');
+                    reloadFromFirebase();
+                })
+                .catch(err => {
+                    console.error('保存失败:', err);
+                    showToast('保存失败，请检查网络', 'error');
+                });
         });
 
         // ================================================================
-        //  其他渲染函数（renderMonthlyBudgets, renderAlerts, renderAll 等）
-        //  由于篇幅限制，这些函数与之前版本相同，但都调用了上述详情函数。
-        //  此处省略完整定义，实际代码中需包含完整实现。
-        //  但为了完整性，我在下方提供完整函数。
+        //  其他渲染
         // ================================================================
-
         function renderMonthlyBudgets() {
             const container = document.getElementById('monthlyBudgetList');
             if (monthlyBudgets.length === 0) {
@@ -1740,9 +1748,9 @@
             let html = '';
             const sorted = [...monthlyBudgets].sort((a, b) => b.month.localeCompare(a.month));
             sorted.forEach(monthly => {
-                const totalBudget = getMonthlyTotalBudget(monthly);
-                const totalActual = getMonthlyTotalActual(monthly);
-                const alert = getMonthlyAlert(monthly);
+                const totalBudget = getMonthlyTotalBudget(monthly),
+                    totalActual = getMonthlyTotalActual(monthly),
+                    alert = getMonthlyAlert(monthly);
                 const statusClass = alert.level === 'danger' ? 'tag-danger' :
                     alert.level === 'warning' ? 'tag-warning' : 'tag-success';
                 const statusText = alert.level === 'danger' ? '⚠️ 超支' :
@@ -1799,7 +1807,8 @@
                     if (confirm(`确定删除 ${month} 的月度预算吗？`)) {
                         monthlyBudgets = monthlyBudgets.filter(m => m.month !== month);
                         pushDataToFirebase()
-                            .then(() => showToast('月度预算已删除', 'success'))
+                            .then(() => { showToast('月度预算已删除', 'success');
+                                reloadFromFirebase(); })
                             .catch(() => showToast('删除失败', 'error'));
                     }
                 });
@@ -1878,17 +1887,9 @@
         // ================================================================
         function pushDataToFirebase() {
             return new Promise((resolve, reject) => {
-                if (pushPending) {
-                    reject(new Error('正在同步中...'));
-                    return;
-                }
+                if (pushPending) { reject('正在同步中...'); return; }
                 pushPending = true;
-                const data = {
-                    batches: batches,
-                    monthlyBudgets: monthlyBudgets,
-                    batchCategories: batchCategories,
-                    monthlyCategories: monthlyCategories
-                };
+                const data = { batches, monthlyBudgets, batchCategories, monthlyCategories };
                 saveAllData(data).then(() => {
                     pushPending = false;
                     saveLocalCache(data);
@@ -1904,55 +1905,68 @@
         }
 
         function updateSyncStatus(online) {
-            const dot = document.getElementById('syncDot');
-            const label = document.getElementById('syncLabel');
-            if (online) {
-                dot.className = 'dot online';
-                label.textContent = '实时同步';
-            } else {
-                dot.className = 'dot offline';
-                label.textContent = '离线';
-            }
+            const dot = document.getElementById('syncDot'),
+                label = document.getElementById('syncLabel');
+            if (online) { dot.className = 'dot online';
+                label.textContent = '实时同步'; } else { dot.className = 'dot offline';
+                label.textContent = '离线'; }
         }
 
         function onRemoteDataUpdate(data) {
             if (pushPending) return;
-            console.log('📦 收到远程更新，刷新页面');
+            console.log('📦 收到远程更新');
             batches = data.batches || [];
             monthlyBudgets = data.monthlyBudgets || [];
             batchCategories = data.batchCategories || [];
             monthlyCategories = data.monthlyCategories || [];
+            // 给旧数据补 id
+            ensureActualIds();
             saveLocalCache(data);
             renderAll();
             updateSyncStatus(true);
         }
 
+        // ---- 确保所有支出记录有 ID ----
+        function ensureActualIds() {
+            batches.forEach(b => {
+                if (b.actuals) {
+                    b.actuals.forEach(a => {
+                        if (!a.id) a.id = generateId();
+                    });
+                }
+            });
+            monthlyBudgets.forEach(m => {
+                if (m.actuals) {
+                    m.actuals.forEach(a => {
+                        if (!a.id) a.id = generateId();
+                    });
+                }
+            });
+        }
+
         function startListening() {
-            if (unlistenFn) {
-                unlistenFn();
-                unlistenFn = null;
-            }
+            if (unlistenFn) { unlistenFn();
+                unlistenFn = null; }
             if (!firebaseInitialized || !db) return;
             unlistenFn = listenDataChange(onRemoteDataUpdate);
         }
 
         function reloadFromFirebase() {
-            return fetchAllData().then((data) => {
+            fetchAllData().then(data => {
                 batches = data.batches || [];
                 monthlyBudgets = data.monthlyBudgets || [];
                 batchCategories = data.batchCategories || [];
                 monthlyCategories = data.monthlyCategories || [];
+                ensureActualIds();
                 saveLocalCache(data);
                 renderAll();
                 updateSyncStatus(true);
-                console.log('🔄 已从 Firebase 重新加载数据');
-            }).catch(err => {
-                console.error('重新加载失败:', err);
-            });
+                console.log('🔄 已从 Firebase 重新加载');
+            }).catch(err => console.error('重新加载失败:', err));
         }
 
         // ================================================================
-        //  初始化数据（含示例数据）
+        //  初始化
         // ================================================================
         function getSampleBatches() {
             return [{
@@ -2026,54 +2040,57 @@
                 monthlyBudgets = cache.monthlyBudgets || [];
                 batchCategories = cache.batchCategories || [];
                 monthlyCategories = cache.monthlyCategories || [];
+                ensureActualIds();
                 renderAll();
                 updateSyncStatus(false);
-                console.log('📦 从本地缓存加载数据');
+                console.log('📦 从缓存加载');
             }
-
             if (!firebaseInitialized || !db) {
-                showToast('⚠️ Firebase 未连接，请检查配置', 'error');
+                showToast('⚠️ Firebase 未连接', 'error');
                 return;
             }
-
-            fetchAllData().then((data) => {
+            fetchAllData().then(data => {
                 if (data.batches.length || data.monthlyBudgets.length || data.batchCategories.length || data
                     .monthlyCategories.length) {
                     batches = data.batches;
                     monthlyBudgets = data.monthlyBudgets;
                     batchCategories = data.batchCategories || [];
                     monthlyCategories = data.monthlyCategories || [];
+                    ensureActualIds();
                     saveLocalCache(data);
                     renderAll();
                     updateSyncStatus(true);
-                    console.log('☁️ 从 Firebase 加载数据');
+                    console.log('☁️ 从 Firebase 加载');
                 } else {
                     if (!cache) {
                         batchCategories = [...DEFAULT_BATCH_CATEGORIES];
                         monthlyCategories = [...DEFAULT_MONTHLY_CATEGORIES];
                         batches = getSampleBatches();
                         monthlyBudgets = getSampleMonthly();
+                        ensureActualIds();
                         renderAll();
                         pushDataToFirebase().catch(() => {});
-                        console.log('📝 初始化默认数据');
+                        console.log('📝 初始化示例数据');
                     }
                 }
                 startListening();
-            }).catch((err) => {
-                console.error('加载数据失败:', err);
+            }).catch(err => {
+                console.error('加载失败:', err);
                 if (cache) {
                     batches = cache.batches || [];
                     monthlyBudgets = cache.monthlyBudgets || [];
                     batchCategories = cache.batchCategories || [];
                     monthlyCategories = cache.monthlyCategories || [];
+                    ensureActualIds();
                     renderAll();
                     updateSyncStatus(false);
-                    showToast('⚠️ 使用本地缓存数据', 'warning');
+                    showToast('⚠️ 使用缓存数据', 'warning');
                 } else {
                     batchCategories = [...DEFAULT_BATCH_CATEGORIES];
                     monthlyCategories = [...DEFAULT_MONTHLY_CATEGORIES];
                     batches = getSampleBatches();
                     monthlyBudgets = getSampleMonthly();
+                    ensureActualIds();
                     renderAll();
                     showToast('⚠️ 使用示例数据', 'warning');
                 }
@@ -2081,7 +2098,7 @@
         }
 
         // ================================================================
-        //  模态框操作（完整保留）
+        //  模态框操作（部分省略，保持简洁）
         // ================================================================
         function closeBatchModal() { document.getElementById('modalBatch').classList.remove('show'); }
 
@@ -2089,7 +2106,6 @@
 
         function closeBatchActualModal() {
             document.getElementById('modalBatchActual').classList.remove('show');
-            // 重置为添加模式
             document.getElementById('batchActualEditId').value = '';
             document.getElementById('batchActualModalTitle').textContent = '📝 录入批次实际支出';
             document.getElementById('batchActualSubmitBtn').textContent = '保存支出';
@@ -2111,7 +2127,7 @@
         function closeMonthlyCategoryModal() { document.getElementById('modalMonthlyCategoryManager').classList.remove(
             'show'); }
 
-        // 新建批次
+        // ---- 新建批次 ----
         document.getElementById('btnAddBatch').addEventListener('click', function() {
             const modal = document.getElementById('modalBatch');
             modal.classList.add('show');
@@ -2160,7 +2176,7 @@
                 });
         });
 
-        // 编辑批次
+        // ---- 编辑批次预算 ----
         function openEditBatchModal(batchId) {
             const batch = batches.find(b => b.id === batchId);
             if (!batch) { showToast('批次不存在', 'error'); return; }
@@ -2209,11 +2225,10 @@
                 .catch(() => showToast('更新失败', 'error'));
         });
 
-        // 录入批次实际支出（打开模态框）
+        // ---- 录入批次实际支出 ----
         function openBatchActualModal(batchId) {
             const batch = batches.find(b => b.id === batchId);
             if (!batch) return;
-            // 重置为添加模式
             document.getElementById('batchActualId').value = batchId;
             document.getElementById('batchActualEditId').value = '';
             document.getElementById('batchActualTitle').textContent = `批次：${batch.name}`;
@@ -2222,17 +2237,16 @@
 
             const select = document.getElementById('batchActualCategory');
             select.innerHTML = '';
-            const categories = batch.budgetItems.map(item => item.category);
-            if (categories.length === 0) {
-                const cats = batchCategories.length ? batchCategories : DEFAULT_BATCH_CATEGORIES;
-                cats.forEach(c => {
+            const cats = batch.budgetItems.map(item => item.category);
+            if (cats.length === 0) {
+                (batchCategories.length ? batchCategories : DEFAULT_BATCH_CATEGORIES).forEach(c => {
                     const opt = document.createElement('option');
                     opt.value = c;
                     opt.textContent = c;
                     select.appendChild(opt);
                 });
             } else {
-                categories.forEach(c => {
+                cats.forEach(c => {
                     const opt = document.createElement('option');
                     opt.value = c;
                     opt.textContent = c;
@@ -2249,7 +2263,7 @@
         document.getElementById('modalBatchActual').addEventListener('click', function(e) { if (e.target === this)
                 closeBatchActualModal(); });
 
-        // 新建月度预算
+        // ---- 新建月度预算 ----
         document.getElementById('btnAddMonthlyBudget').addEventListener('click', function() {
             const modal = document.getElementById('modalMonthlyBudget');
             modal.classList.add('show');
@@ -2298,7 +2312,7 @@
                 .catch(() => showToast('创建失败', 'error'));
         });
 
-        // 编辑月度预算
+        // ---- 编辑月度预算 ----
         function openEditMonthlyModal(month) {
             const monthly = monthlyBudgets.find(m => m.month === month);
             if (!monthly) { showToast('月度预算不存在', 'error'); return; }
@@ -2348,7 +2362,7 @@
                 .catch(() => showToast('更新失败', 'error'));
         });
 
-        // 录入月度实际支出（打开模态框）
+        // ---- 录入月度实际支出 ----
         function openMonthlyActualModal(month) {
             const monthly = monthlyBudgets.find(m => m.month === month);
             if (!monthly) return;
@@ -2360,17 +2374,16 @@
 
             const select = document.getElementById('monthlyActualCategory');
             select.innerHTML = '';
-            const categories = monthly.budgetItems.map(item => item.category);
-            if (categories.length === 0) {
-                const cats = monthlyCategories.length ? monthlyCategories : DEFAULT_MONTHLY_CATEGORIES;
-                cats.forEach(c => {
+            const cats = monthly.budgetItems.map(item => item.category);
+            if (cats.length === 0) {
+                (monthlyCategories.length ? monthlyCategories : DEFAULT_MONTHLY_CATEGORIES).forEach(c => {
                     const opt = document.createElement('option');
                     opt.value = c;
                     opt.textContent = c;
                     select.appendChild(opt);
                 });
             } else {
-                categories.forEach(c => {
+                cats.forEach(c => {
                     const opt = document.createElement('option');
                     opt.value = c;
                     opt.textContent = c;
@@ -2388,7 +2401,7 @@
                 closeMonthlyActualModal(); });
 
         // ================================================================
-        //  类别管理（批次 & 月度）
+        //  类别管理
         // ================================================================
         function renderBatchCategoryManager() {
             const container = document.getElementById('batchCategoryListContainer');
@@ -2430,15 +2443,12 @@
                     batchCategories = batchCategories.filter(c => c !== cat);
                     pushDataToFirebase()
                         .then(() => {
-                            return reloadFromFirebase();
-                        })
-                        .then(() => {
-                            renderBatchCategoryManager();
+                            reloadFromFirebase();
                             showToast(`已删除类别「${cat}」`, 'success');
                         })
-                        .catch((err) => {
+                        .catch(err => {
                             console.error('删除失败:', err);
-                            showToast('删除失败，请检查网络或Firebase配置', 'error');
+                            showToast('删除失败，请检查网络', 'error');
                         });
                 });
             });
@@ -2508,10 +2518,7 @@
                     monthlyCategories = monthlyCategories.filter(c => c !== cat);
                     pushDataToFirebase()
                         .then(() => {
-                            return reloadFromFirebase();
-                        })
-                        .then(() => {
-                            renderMonthlyCategoryManager();
+                            reloadFromFirebase();
                             showToast(`已删除类别「${cat}」`, 'success');
                         })
                         .catch(() => showToast('删除失败', 'error'));
