@@ -1474,138 +1474,74 @@
             });
         }
 
-        function showMonthlyDetail(month) {
-            const monthly = monthlyBudgets.find(m => m.month === month);
-            if (!monthly) return;
-            const cats = monthlyCategories.length ? monthlyCategories : DEFAULT_MONTHLY_CATEGORIES;
-            const allCats = [...new Set([...monthly.budgetItems.map(i => i.category), ...cats])];
-            let detailHtml =
-                `<div style="margin-bottom:12px;"><strong>${month}</strong><span class="text-muted text-small" style="margin-left:12px;">总预算: ${formatCurrency(getMonthlyTotalBudget(monthly))}</span><span class="text-muted text-small">已支出: ${formatCurrency(getMonthlyTotalActual(monthly))}</span></div>
-                <div class="table-wrap"><table><thead><tr><th>类别</th><th>预算</th><th>实际</th><th>差异</th><th>完成%</th></tr></thead><tbody>`;
-            allCats.forEach(cat => {
-                const budgetItem = monthly.budgetItems.find(i => i.category === cat);
-                const budget = budgetItem ? budgetItem.budget : 0;
-                const actual = monthly.actuals.filter(a => a.category === cat).reduce((s, a) => s + a.amount, 0);
-                const diff = actual - budget;
-                const percent = budget > 0 ? (actual / budget) * 100 : 0;
-                const diffColor = diff > 0 ? 'var(--danger)' : (diff < 0 ? 'var(--success)' :
-                'var(--text-secondary)');
-                detailHtml +=
-                    `<tr><td>${cat}</td><td>${formatCurrency(budget)}</td><td>${formatCurrency(actual)}</td><td style="color:${diffColor};">${diff >= 0 ? '+' : ''}${formatCurrency(diff)}</td><td>${budget > 0 ? percent.toFixed(1) : '-'}%</td></tr>`;
-            });
-            const totalBudget = getMonthlyTotalBudget(monthly);
-            const totalActual = getMonthlyTotalActual(monthly);
-            const totalDiff = totalActual - totalBudget;
-            const totalPercent = totalBudget > 0 ? (totalActual / totalBudget) * 100 : 0;
-            const totalColor = totalDiff > 0 ? 'var(--danger)' : (totalDiff < 0 ? 'var(--success)' :
-            'var(--text-secondary)');
+      function showMonthlyDetail(month) {
+    const monthly = monthlyBudgets.find(m => m.month === month);
+    if (!monthly) return;
+    const cats = monthlyCategories.length ? monthlyCategories : DEFAULT_MONTHLY_CATEGORIES;
+    const allCats = [...new Set([...monthly.budgetItems.map(i => i.category), ...cats])];
+    let detailHtml =
+        `<div style="margin-bottom:12px;"><strong>${month}</strong><span class="text-muted text-small" style="margin-left:12px;">总预算: ${formatCurrency(getMonthlyTotalBudget(monthly))}</span><span class="text-muted text-small">已支出: ${formatCurrency(getMonthlyTotalActual(monthly))}</span></div>
+        <div class="table-wrap"><table><thead><tr><th>类别</th><th>预算</th><th>实际</th><th>差异</th><th>完成%</th></tr></thead><tbody>`;
+    allCats.forEach(cat => {
+        const budgetItem = monthly.budgetItems.find(i => i.category === cat);
+        const budget = budgetItem ? budgetItem.budget : 0;
+        const actual = (monthly.actuals || []).filter(a => a.category === cat).reduce((s, a) => s + a.amount, 0);
+        const diff = actual - budget;
+        const percent = budget > 0 ? (actual / budget) * 100 : 0;
+        const diffColor = diff > 0 ? 'var(--danger)' : (diff < 0 ? 'var(--success)' : 'var(--text-secondary)');
+        detailHtml +=
+            `<tr><td>${cat}</td><td>${formatCurrency(budget)}</td><td>${formatCurrency(actual)}</td><td style="color:${diffColor};">${diff >= 0 ? '+' : ''}${formatCurrency(diff)}</td><td>${budget > 0 ? percent.toFixed(1) : '-'}%</td></tr>`;
+    });
+    const totalBudget = getMonthlyTotalBudget(monthly);
+    const totalActual = getMonthlyTotalActual(monthly);
+    const totalDiff = totalActual - totalBudget;
+    const totalPercent = totalBudget > 0 ? (totalActual / totalBudget) * 100 : 0;
+    const totalColor = totalDiff > 0 ? 'var(--danger)' : (totalDiff < 0 ? 'var(--success)' : 'var(--text-secondary)');
+    detailHtml +=
+        `<tr style="font-weight:700;background:var(--bg);"><td>合计</td><td>${formatCurrency(totalBudget)}</td><td>${formatCurrency(totalActual)}</td><td style="color:${totalColor};">${totalDiff >= 0 ? '+' : ''}${formatCurrency(totalDiff)}</td><td>${totalBudget > 0 ? totalPercent.toFixed(1) : '-'}%</td></tr>`;
+    detailHtml += `</tbody></table></div>`;
+    if ((monthly.actuals || []).length > 0) {
+        detailHtml += `<div style="margin-top:16px;"><strong>📋 实际支出明细</strong></div><div class="table-wrap"><table><thead><tr><th>日期</th><th>类别</th><th>金额</th><th>备注</th></tr></thead><tbody>`;
+        const sortedActuals = [...(monthly.actuals || [])].sort((a, b) => a.date.localeCompare(b.date));
+        sortedActuals.forEach(a => {
             detailHtml +=
-                `<tr style="font-weight:700;background:var(--bg);"><td>合计</td><td>${formatCurrency(totalBudget)}</td><td>${formatCurrency(totalActual)}</td><td style="color:${totalColor};">${totalDiff >= 0 ? '+' : ''}${formatCurrency(totalDiff)}</td><td>${totalBudget > 0 ? totalPercent.toFixed(1) : '-'}%</td></tr>`;
-            detailHtml += `</tbody></table></div>`;
-           if ((monthly.actuals || []).length > 0)
-                detailHtml += `<div style="margin-top:16px;"><strong>📋 实际支出明细</strong></div><div class="table-wrap"><table><thead><tr><th>日期</th><th>类别</th><th>金额</th><th>备注</th></tr></thead><tbody>`;
-                const sortedActuals = [...monthly.actuals].sort((a, b) => a.date.localeCompare(b.date));
-                sortedActuals.forEach(a => {
-                    detailHtml +=
-                        `<tr><td>${a.date}</td><td>${a.category}</td><td>${formatCurrency(a.amount)}</td><td>${a.note || ''}</td></tr>`;
-                });
-                detailHtml += `</tbody></table></div>`;
-            } else {
-                detailHtml += `<div class="text-muted text-small" style="margin-top:12px;">暂无实际支出记录</div>`;
-            }
-            const modal = document.createElement('div');
-            modal.className = 'modal-overlay show';
-            modal.innerHTML = `
-                <div class="modal-content" style="max-width:700px;">
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
-                    <h2>📋 月度详情</h2>
-                    ${detailHtml}
-                    <div style="margin-top:16px; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
-                        <button class="btn btn-warning" data-month="${month}" id="downloadMonthlyFromDetail">📥 导出该月度</button>
-                        <button class="btn btn-warning" data-month="${month}" id="editMonthlyFromDetail">✏️ 编辑预算</button>
-                        <button class="btn btn-success" data-month="${month}" id="addMonthlyActualFromDetail">➕ 录入支出</button>
-                        <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">关闭</button>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-            modal.querySelector('#downloadMonthlyFromDetail').addEventListener('click', function() {
-                const m = this.dataset.month;
-                downloadMonthlyCSV(m);
-            });
-            modal.querySelector('#editMonthlyFromDetail').addEventListener('click', function() {
-                const m = this.dataset.month;
-                modal.remove();
-                openEditMonthlyModal(m);
-            });
-            modal.querySelector('#addMonthlyActualFromDetail').addEventListener('click', function() {
-                const m = this.dataset.month;
-                modal.remove();
-                openMonthlyActualModal(m);
-            });
-            modal.addEventListener('click', function(e) { if (e.target === this) this.remove(); });
-        }
-
-        function renderAlerts() {
-            const container = document.getElementById('alertBoard');
-            let alertsHtml = '';
-            if (batches.length > 0) {
-                alertsHtml += `<h3 style="margin:12px 0 8px;">📦 批次预警</h3>`;
-                batches.forEach(batch => {
-                    const alert = getBatchAlert(batch);
-                    if (alert.level === 'none') return;
-                    const status = alert.level === 'danger' ? '🔴 超支' : '🟡 接近预算';
-                    const cls = alert.level === 'danger' ? 'danger' : '';
-                    alertsHtml += `
-                        <div class="alert-card ${cls}">
-                            <div class="flex-between">
-                                <span><strong>${batch.name}</strong> - ${status}</span>
-                                <span>实际 ${formatCurrency(getBatchTotalActual(batch))} / 预算 ${formatCurrency(getBatchTotalBudget(batch))}</span>
-                            </div>
-                            <div class="flex-between text-small">
-                                <span>超支/节约: ${alert.diff >= 0 ? '+' : ''}${formatCurrency(alert.diff)} (${alert.diffPercent >= 0 ? '+' : ''}${alert.diffPercent.toFixed(1)}%)</span>
-                                <span>使用率: ${alert.percent.toFixed(1)}%</span>
-                            </div>
-                            <div class="progress-bar" style="margin-top:4px;">
-                                <div class="fill ${alert.level === 'danger' ? 'red' : 'yellow'}" style="width:${Math.min(alert.percent, 100)}%;"></div>
-                            </div>
-                        </div>
-                    `;
-                });
-            }
-            if (monthlyBudgets.length > 0) {
-                alertsHtml += `<h3 style="margin:16px 0 8px;">📅 月度支出预警</h3>`;
-                monthlyBudgets.forEach(monthly => {
-                    const alert = getMonthlyAlert(monthly);
-                    if (alert.level === 'none') return;
-                    const status = alert.level === 'danger' ? '🔴 超支' : '🟡 接近预算';
-                    const cls = alert.level === 'danger' ? 'danger' : '';
-                    alertsHtml += `
-                        <div class="alert-card ${cls}">
-                            <div class="flex-between">
-                                <span><strong>${monthly.month}</strong> - ${status}</span>
-                                <span>实际 ${formatCurrency(getMonthlyTotalActual(monthly))} / 预算 ${formatCurrency(getMonthlyTotalBudget(monthly))}</span>
-                            </div>
-                            <div class="flex-between text-small">
-                                <span>超支/节约: ${alert.diff >= 0 ? '+' : ''}${formatCurrency(alert.diff)} (${alert.diffPercent >= 0 ? '+' : ''}${alert.diffPercent.toFixed(1)}%)</span>
-                                <span>使用率: ${alert.percent.toFixed(1)}%</span>
-                            </div>
-                            <div class="progress-bar" style="margin-top:4px;">
-                                <div class="fill ${alert.level === 'danger' ? 'red' : 'yellow'}" style="width:${Math.min(alert.percent, 100)}%;"></div>
-                            </div>
-                        </div>
-                    `;
-                });
-            }
-            if (!alertsHtml) {
-                alertsHtml =
-                    `<div class="card"><div class="empty-state"><div class="icon">✅</div><p>当前没有预警，所有预算均在正常范围内</p></div></div>`;
-            } else {
-                alertsHtml = `<div class="card">${alertsHtml}</div>`;
-            }
-            container.innerHTML = alertsHtml;
-        }
-
+                `<tr><td>${a.date}</td><td>${a.category}</td><td>${formatCurrency(a.amount)}</td><td>${a.note || ''}</td></tr>`;
+        });
+        detailHtml += `</tbody></table></div>`;
+    } else {
+        detailHtml += `<div class="text-muted text-small" style="margin-top:12px;">暂无实际支出记录</div>`;
+    }
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay show';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width:700px;">
+            <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+            <h2>📋 月度详情</h2>
+            ${detailHtml}
+            <div style="margin-top:16px; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
+                <button class="btn btn-warning" data-month="${month}" id="downloadMonthlyFromDetail">📥 导出该月度</button>
+                <button class="btn btn-warning" data-month="${month}" id="editMonthlyFromDetail">✏️ 编辑预算</button>
+                <button class="btn btn-success" data-month="${month}" id="addMonthlyActualFromDetail">➕ 录入支出</button>
+                <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">关闭</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelector('#downloadMonthlyFromDetail').addEventListener('click', function() {
+        downloadMonthlyCSV(this.dataset.month);
+    });
+    modal.querySelector('#editMonthlyFromDetail').addEventListener('click', function() {
+        const m = this.dataset.month;
+        modal.remove();
+        openEditMonthlyModal(m);
+    });
+    modal.querySelector('#addMonthlyActualFromDetail').addEventListener('click', function() {
+        const m = this.dataset.month;
+        modal.remove();
+        openMonthlyActualModal(m);
+    });
+    modal.addEventListener('click', function(e) { if (e.target === this) this.remove(); });
+}
         function renderAll() {
             renderHeaderDate();
             renderBatches();
